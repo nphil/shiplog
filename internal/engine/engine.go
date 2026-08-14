@@ -521,8 +521,17 @@ func (e *Engine) check(ctx context.Context, c model.Container, resolve resolveFu
 			// OpenHands' own template moved from junkerderprovinz/openhands to
 			// junkerderprovinz/unraid-apps; the feed caught up, the stale local
 			// install's <TemplateURL> didn't).
+			// Both checks below only make sense for apps that CAME from
+			// Community Applications, and the marker for that is a template
+			// carrying a <TemplateURL>. A hand-authored template (or a plain
+			// `docker run` with no template at all) has none — those are the
+			// user's own builds, absent from the CA feed by nature, and the
+			// two-crawl absence rule would brand every one of them "Removed
+			// from Community Applications" forever. Leave their CA state
+			// alone entirely; the archived-source-repo signal above still
+			// applies to them, since it comes from the app's own repo.
 			feedConclusive := false
-			if c.Managed && caFeed != nil {
+			if c.Managed && caFeed != nil && u != "" {
 				if res, ok := caFeed.Lookup(c.Name, c.Repo, u); ok {
 					feedConclusive = true
 					switch {

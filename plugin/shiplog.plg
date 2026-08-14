@@ -5,9 +5,9 @@
   <!ENTITY author    "Junker der Provinz">
   <!ENTITY version   "3.3.0">
   <!ENTITY launch    "Settings/shiplog">
-  <!ENTITY gitURL    "https://raw.githubusercontent.com/junkerderprovinz/shiplog/main/plugin">
+  <!ENTITY gitURL    "https://raw.githubusercontent.com/nphil/shiplog/main/plugin">
   <!ENTITY pluginURL "&gitURL;/&slug;.plg">
-  <!ENTITY pkgURL    "https://github.com/junkerderprovinz/shiplog/releases/download/v&version;">
+  <!ENTITY pkgURL    "https://github.com/nphil/shiplog/releases/download/v&version;">
   <!ENTITY emhttp    "/usr/local/emhttp/plugins/&slug;">
   <!ENTITY plgPath   "/boot/config/plugins/&slug;">
   <!ENTITY txz       "&slug;-&version;-x86_64-1.txz">
@@ -32,6 +32,10 @@
 Shows the changelog of your installed Docker containers, right in the Docker tab:
 what changed from your running image to the newest, with a risk badge. Read-only,
 optional AI summaries (Ollama) and Matrix alerts.
+
+### 3.3.1
+🔧 **Fix** (nphil fork)
+- Self-built apps are no longer branded "Discontinued". A container installed from a hand-authored template (no TemplateURL) was never in Community Applications, so the feed's two-crawl absence rule now leaves it alone instead of declaring it removed. The archived-source-repo signal still applies to everything.
 
 ### 3.3.0
 🎨 **Design**

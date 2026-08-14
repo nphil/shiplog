@@ -325,6 +325,33 @@ func TestSweepFlagsUnmaintainedViaCAFeedAbsent(t *testing.T) {
 	}
 }
 
+// A container from a hand-authored template (no <TemplateURL>) was never in
+// Community Applications, so the feed's conclusive "absent from two crawls"
+// must not brand it removed — that verdict is only meaningful for apps that
+// actually came from CA. Reproduces the false positive observed live on every
+// self-built app on the box (homelabber, stashify, retiron).
+func TestSweepPersonalTemplateIsNotFlaggedUnmaintained(t *testing.T) {
+	col := fakeCollector{list: []model.Container{
+		{ID: "own", Name: "MyOwnApp", Repo: "ghcr.io/x/ownapp", Tag: "1.0.0", Digest: "sha256:p", Managed: true},
+	}}
+	res := fakeResolver{byRepo: map[string]resolveResult{"ghcr.io/x/ownapp": {tag: "1.0.0", dig: "sha256:p"}}}
+	st := &fakeStore{}
+	e := New(col, res, &fakeChangelog{}, st, time.Hour)
+	e.templateURLs = func() map[string]string {
+		return map[string]string{"myownapp": ""} // user template with an empty <TemplateURL/>
+	}
+	e.checkURL = func(context.Context, string) int { return 404 }
+	e.caFeed = func(context.Context) (caFeedLookuper, error) {
+		return fakeCAFeed{ok: true, result: cafeed.Result{Listed: false}}, nil
+	}
+	if err := e.Sweep(context.Background()); err != nil {
+		t.Fatalf("sweep: %v", err)
+	}
+	if g := st.rows["own"]; g.Unmaintained {
+		t.Fatalf("personal-template app wrongly flagged unmaintained: %q", g.UnmaintainedReason)
+	}
+}
+
 // Reproduces the real OpenHands case found live: the LOCALLY installed
 // template's <TemplateURL> still points at its old, now-404ing repo path
 // (junkerderprovinz/openhands), while the CA feed has already caught up to
@@ -368,7 +395,10 @@ func TestSweepFlagsUnmaintainedViaCAFeedBlacklisted(t *testing.T) {
 	res := fakeResolver{byRepo: map[string]resolveResult{"x/bad": {tag: "1.0.0", dig: "sha256:b"}}}
 	st := &fakeStore{}
 	e := New(col, res, &fakeChangelog{}, st, time.Hour)
-	e.templateURLs = func() map[string]string { return nil }
+	// CA-installed, so it carries a TemplateURL — the feed verdict only applies to those.
+	e.templateURLs = func() map[string]string {
+		return map[string]string{"badapp": "https://raw.githubusercontent.com/x/bad/main/badapp.xml"}
+	}
 	e.checkURL = func(context.Context, string) int { return 200 }
 	e.caFeed = func(context.Context) (caFeedLookuper, error) {
 		return fakeCAFeed{ok: true, result: cafeed.Result{Listed: false, Note: "Repository no longer exists on dockerHub"}}, nil
@@ -392,7 +422,10 @@ func TestSweepFlagsCADeprecatedWithoutUnmaintained(t *testing.T) {
 	res := fakeResolver{byRepo: map[string]resolveResult{"coppit/handbrake": {tag: "1.0.0", dig: "sha256:h"}}}
 	st := &fakeStore{}
 	e := New(col, res, &fakeChangelog{}, st, time.Hour)
-	e.templateURLs = func() map[string]string { return nil }
+	// CA-installed, so it carries a TemplateURL — the feed verdict only applies to those.
+	e.templateURLs = func() map[string]string {
+		return map[string]string{"handbrake": "https://raw.githubusercontent.com/coppit/unraid-templates/main/handbrake.xml"}
+	}
 	e.checkURL = func(context.Context, string) int { return 200 }
 	e.caFeed = func(context.Context) (caFeedLookuper, error) {
 		return fakeCAFeed{ok: true, result: cafeed.Result{Listed: true, Deprecated: true, Note: "A better supported and more up to date app is available from DJoss"}}, nil
