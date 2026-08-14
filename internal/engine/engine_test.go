@@ -352,6 +352,35 @@ func TestSweepPersonalTemplateIsNotFlaggedUnmaintained(t *testing.T) {
 	}
 }
 
+// A source override is the user saying "this app is mine, its changelog lives
+// here" — that must also exempt the app from the CA verdicts, because such a
+// template often points its <TemplateURL> into the user's own PRIVATE repo,
+// which 404s publicly and would otherwise trip the raw-URL proxy (reproduces
+// the live stashify case: private nphil/stashify template URL, override set).
+func TestSweepSourceOverrideExemptsFromUnmaintained(t *testing.T) {
+	col := fakeCollector{list: []model.Container{
+		{ID: "mine", Name: "Stashify", Repo: "ghcr.io/x/stashify", Tag: "1.0.0", Digest: "sha256:s", Managed: true},
+	}}
+	res := fakeResolver{byRepo: map[string]resolveResult{"ghcr.io/x/stashify": {tag: "1.0.0", dig: "sha256:s"}}}
+	st := &fakeStore{overrides: map[string]string{"ghcr.io/x/stashify": "https://github.com/x/stashify"}}
+	e := New(col, res, &fakeChangelog{}, st, time.Hour)
+	e.templateURLs = func() map[string]string {
+		return map[string]string{"stashify": "https://raw.githubusercontent.com/x/stashify/main/unraid/stashify.xml"}
+	}
+	// A private repo 404s publicly on the raw path AND the repo page, so the
+	// proxy plus its corroboration would both scream "gone" without the override.
+	e.checkURL = func(context.Context, string) int { return 404 }
+	e.caFeed = func(context.Context) (caFeedLookuper, error) {
+		return fakeCAFeed{ok: true, result: cafeed.Result{Listed: false}}, nil
+	}
+	if err := e.Sweep(context.Background()); err != nil {
+		t.Fatalf("sweep: %v", err)
+	}
+	if g := st.rows["mine"]; g.Unmaintained {
+		t.Fatalf("override-sourced app wrongly flagged unmaintained: %q", g.UnmaintainedReason)
+	}
+}
+
 // Reproduces the real OpenHands case found live: the LOCALLY installed
 // template's <TemplateURL> still points at its old, now-404ing repo path
 // (junkerderprovinz/openhands), while the CA feed has already caught up to

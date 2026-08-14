@@ -522,16 +522,21 @@ func (e *Engine) check(ctx context.Context, c model.Container, resolve resolveFu
 			// junkerderprovinz/unraid-apps; the feed caught up, the stale local
 			// install's <TemplateURL> didn't).
 			// Both checks below only make sense for apps that CAME from
-			// Community Applications, and the marker for that is a template
-			// carrying a <TemplateURL>. A hand-authored template (or a plain
-			// `docker run` with no template at all) has none — those are the
-			// user's own builds, absent from the CA feed by nature, and the
-			// two-crawl absence rule would brand every one of them "Removed
-			// from Community Applications" forever. Leave their CA state
-			// alone entirely; the archived-source-repo signal above still
-			// applies to them, since it comes from the app's own repo.
+			// Community Applications. Two signals mark an app as the user's
+			// own instead: a template with no <TemplateURL> (hand-authored,
+			// or a plain `docker run` with no template at all), and an
+			// explicit changelog-source override for its repo (the user
+			// told us where THEY publish it). Such apps are absent from the
+			// CA feed by nature — and a template URL pointing into the
+			// user's own private repo 404s publicly — so the two-crawl
+			// absence rule and the raw-URL proxy would brand every one of
+			// them "Removed from Community Applications" forever. Leave
+			// their CA state alone entirely; the archived-source-repo
+			// signal above still applies, since it comes from the app's
+			// own repo.
+			_, selfSourced := overrides[c.Repo]
 			feedConclusive := false
-			if c.Managed && caFeed != nil && u != "" {
+			if c.Managed && caFeed != nil && u != "" && !selfSourced {
 				if res, ok := caFeed.Lookup(c.Name, c.Repo, u); ok {
 					feedConclusive = true
 					switch {
@@ -544,7 +549,7 @@ func (e *Engine) check(ctx context.Context, c model.Container, resolve resolveFu
 					}
 				}
 			}
-			if !feedConclusive && c.Managed && u != "" && e.checkURL != nil && e.checkURL(ctx, u) == http.StatusNotFound && e.repoGone(ctx, u) {
+			if !feedConclusive && c.Managed && u != "" && !selfSourced && e.checkURL != nil && e.checkURL(ctx, u) == http.StatusNotFound && e.repoGone(ctx, u) {
 				st.Unmaintained, st.UnmaintainedReason = true, "Removed from Community Applications"
 			}
 		}
