@@ -31,9 +31,11 @@ type Config struct {
 	// P1 (parsed now, unused until the providers land):
 	OllamaURL        string // OLLAMA_URL
 	OllamaModel      string // OLLAMA_MODEL
+	LlamaSwapURL     string // LLAMASWAP_URL (preferred over OLLAMA_* if set)
+	LlamaSwapModel   string // LLAMASWAP_MODEL
 	MatrixHomeserver string // MATRIX_HOMESERVER
 	MatrixToken      string // MATRIX_TOKEN
-	MatrixRoom       string // MATRIX_ROOM
+	MatrixRoom       string // MATRIX_ROOM // MATRIX_ROOM
 
 	// UnraidNotify sends native Unraid notifications (they show in Unraid's
 	// notification centre and fan out to every agent the user configured) in
@@ -77,6 +79,8 @@ func Load() Config {
 		DockerHubToken:   os.Getenv("DOCKERHUB_TOKEN"),
 		OllamaURL:        os.Getenv("OLLAMA_URL"),
 		OllamaModel:      os.Getenv("OLLAMA_MODEL"),
+		LlamaSwapURL:     os.Getenv("LLAMASWAP_URL"),
+		LlamaSwapModel:   os.Getenv("LLAMASWAP_MODEL"),
 		MatrixHomeserver: os.Getenv("MATRIX_HOMESERVER"),
 		MatrixToken:      os.Getenv("MATRIX_TOKEN"),
 		MatrixRoom:       os.Getenv("MATRIX_ROOM"),

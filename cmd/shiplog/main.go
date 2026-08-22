@@ -59,17 +59,15 @@ func main() {
 	// proxy and archived-repo checks it complements.
 	eng.WithCAFeed(cfg.DataDir)
 
-	// Optional AI summaries (Ollama). nil when unconfigured → silently skipped.
-	// Ping once at startup so the log says plainly whether summaries will work.
-	if sum := summarize.New(cfg.OllamaURL, cfg.OllamaModel); sum != nil {
-		eng.WithSummarizer(sum)
-		pingCtx, cancelPing := context.WithTimeout(context.Background(), 10*time.Second)
-		if perr := sum.Ping(pingCtx); perr != nil {
-			log.Printf("shiplog: Ollama configured (%s, model %s) but NOT working: %v", cfg.OllamaURL, cfg.OllamaModel, perr)
-		} else {
-			log.Printf("shiplog: Ollama OK — AI summaries enabled (%s, model %s)", cfg.OllamaURL, cfg.OllamaModel)
-		}
-		cancelPing()
+	// Optional AI summaries: llama-swap (preferred when both are set) or Ollama.
+	// nil when unconfigured → silently skipped. Ping once at startup so the log
+	// says plainly whether summaries will work.
+	if ls := summarize.NewLlamaSwap(cfg.LlamaSwapURL, cfg.LlamaSwapModel); ls != nil {
+		eng.WithSummarizer(ls)
+		logSummarizerPing("llama-swap", cfg.LlamaSwapURL, cfg.LlamaSwapModel, ls.Ping)
+	} else if o := summarize.New(cfg.OllamaURL, cfg.OllamaModel); o != nil {
+		eng.WithSummarizer(o)
+		logSummarizerPing("Ollama", cfg.OllamaURL, cfg.OllamaModel, o.Ping)
 	}
 
 	// Notification channels: optional Matrix + optional native Unraid
@@ -212,3 +210,15 @@ func runAutoUpdate(ctx context.Context, cfg config.AutoUpdateConfig, exec *autou
 // lastRunKey is the meta store key holding the unix time of the last scheduled
 // auto-update run, so the cadence survives a daemon restart.
 const lastRunKey = "autoupdate_last_run"
+
+// logSummarizerPing pings an AI summariser once at startup with a short
+// timeout and logs plainly whether summaries will work.
+func logSummarizerPing(name, url, model string, ping func(context.Context) error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := ping(ctx); err != nil {
+		log.Printf("shiplog: %s configured (%s, model %s) but NOT working: %v", name, url, model, err)
+		return
+	}
+	log.Printf("shiplog: %s OK — AI summaries enabled (%s, model %s)", name, url, model)
+}
