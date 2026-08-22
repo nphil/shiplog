@@ -31,7 +31,12 @@
 <CHANGES>
 Shows the changelog of your installed Docker containers, right in the Docker tab:
 what changed from your running image to the newest, with a risk badge. Read-only,
-optional AI summaries (Ollama) and Matrix alerts.
+optional AI summaries (Ollama or llama-swap) and Matrix alerts.
+
+### 3.4.0
+✨ **Feature** (nphil fork)
+- AI summaries can now come from llama-swap — or any OpenAI-compatible server (LM Studio, vLLM) — alongside Ollama: new llama-swap URL + model fields with a live Check button in Settings → AI summaries. When both are configured, llama-swap takes priority.
+- Fork CI now publishes the Docker engine image to the fork's own GHCR namespace (was hardcoded to upstream's, so every image build on the fork failed at the push step).
 
 ### 3.3.2
 🔧 **Fix** (nphil fork)
