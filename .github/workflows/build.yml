@@ -20,7 +20,7 @@ permissions:
   security-events: write # Trivy uploads its CVE report (SARIF) to the Security tab
 
 env:
-  IMAGE_NAME: ghcr.io/junkerderprovinz/shiplog
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/shiplog
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
