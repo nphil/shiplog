@@ -272,11 +272,12 @@ func indexTemplateRepos(entries []Entry, repositories json.RawMessage) map[strin
 // templateRepoKey reduces a template (or repository) URL to the lower-cased
 // "host/owner/repo" of the repository it lives in, for the two hosts
 // Community Applications crawls: GitHub (raw.githubusercontent.com, github.com
-// blob/raw/tree URLs) and GitLab (".../owner/repo/-/raw/..."; the project path
-// is everything before the "/-/" marker, so nested groups work). Branch, file
-// path, ".git" suffix, query and case are all ignored. ok=false for any other
-// host or a URL that names no repository — such a template is not one CA can
-// have crawled.
+// blob/raw/tree URLs) and GitLab. A GitLab project path may nest groups: it
+// ends at the "/-/" marker (".../group/sub/proj/-/raw/..."), or at a
+// raw/blob/tree segment in older URLs, and a bare project URL (as the
+// repositories list stores it) is kept whole. Branch, file path, ".git"
+// suffix, query and case are all ignored. ok=false for any other host or a URL
+// that names no repository — such a template is not one CA can have crawled.
 func templateRepoKey(raw string) (string, bool) {
 	s := strings.TrimSpace(raw)
 	switch {
@@ -298,11 +299,15 @@ func templateRepoKey(raw string) (string, bool) {
 		host = "github.com"
 		segs = segs[:min(len(segs), 2)]
 	case "gitlab.com":
+		end := len(segs)
 		if i := slices.Index(segs, "-"); i >= 0 {
-			segs = segs[:i]
-		} else {
-			segs = segs[:min(len(segs), 2)] // older raw URLs: .../owner/repo/raw/branch/file
+			end = i
+		} else if i := slices.IndexFunc(segs[min(len(segs), 2):], func(p string) bool {
+			return p == "raw" || p == "blob" || p == "tree"
+		}); i >= 0 {
+			end = i + 2 // older URLs: .../owner/repo/raw/branch/file
 		}
+		segs = segs[:end]
 	default:
 		return "", false
 	}

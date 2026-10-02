@@ -522,7 +522,23 @@ func (r *Resolver) dropToken(key string) {
 // retrying transient rate-limit (429) / unavailable (503) responses with
 // bounded exponential backoff that honours Retry-After. The last response is
 // returned even when it's still a 429/503, so the caller can surface it.
+//
+// A request that carries stored credentials in extra (the Basic-auth token
+// request) never follows a redirect: Go forwards Authorization to the same host
+// even across an https→http downgrade, and to its subdomains, so one 302 from
+// the realm would put a registry login on the wire in the clear or hand it to
+// another name. The 3xx comes back as the final response and the caller reports
+// it as an ordinary lookup error.
 func (r *Resolver) do(ctx context.Context, method, url, host, token string, extra ...header) (*http.Response, error) {
+	client := r.httpClient
+	for _, h := range extra {
+		if h.key == "Authorization" {
+			c := *r.httpClient
+			c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+			client = &c
+			break
+		}
+	}
 	var resp *http.Response
 	for attempt := 0; ; attempt++ {
 		r.gate.wait(ctx, host)
@@ -536,7 +552,7 @@ func (r *Resolver) do(ctx context.Context, method, url, host, token string, extr
 		if token != "" {
 			req.Header.Set("Authorization", "Bearer "+token)
 		}
-		resp, err = r.httpClient.Do(req)
+		resp, err = client.Do(req)
 		if err != nil {
 			return nil, err
 		}

@@ -254,6 +254,10 @@ func TestTemplateRepoKey(t *testing.T) {
 		"https://gitlab.com/yaya/unraid-templates/-/raw/main/yaya/frigate.xml": "gitlab.com/yaya/unraid-templates",
 		"https://gitlab.com/group/sub/proj/-/raw/master/docker/unraid.xml":     "gitlab.com/group/sub/proj", // nested group
 		"https://gitlab.com/owner/repo/raw/master/app.xml":                     "gitlab.com/owner/repo",     // pre-"/-/" raw URL
+		"https://gitlab.com/group/sub/proj":                                    "gitlab.com/group/sub/proj", // a bare project URL, as the repositories list stores it
+		"https://gitlab.com/group/sub/proj/":                                   "gitlab.com/group/sub/proj",
+		"https://gitlab.com/owner/repo/blob/main/dir/app.xml":                  "gitlab.com/owner/repo",
+		"https://gitlab.com/owner/repo.git":                                    "gitlab.com/owner/repo",
 		"https://raw.githubusercontent.com/onlyowner":                          "",
 		"https://git.example.org/me/app/raw/branch/main/app.xml":               "", // not a host CA crawls
 		"https://gist.githubusercontent.com/me/abc123/raw/app.xml":             "",
@@ -285,7 +289,8 @@ const realisticFeed = `{
   "repositories": {
     "hofq's Repository": {"url":"https://github.com/hofq/docker-templates","bio":"x"},
     "Empty Repo":        {"url":"https://github.com/someone/emptied-repo"},
-    "yayitazale":        {"url":"https://gitlab.com/yayitazale/unraid-templates"}
+    "yayitazale":        {"url":"https://gitlab.com/yayitazale/unraid-templates"},
+    "Nested":            {"url":"https://gitlab.com/group/sub/proj"}
   },
   "blacklisted": {"x/bad":"Repository no longer exists on dockerHub"},
   "last_updated_timestamp": 5
@@ -304,6 +309,7 @@ func TestCrawlsTemplate(t *testing.T) {
 		{"repo listed by name, case differs", "https://raw.githubusercontent.com/HOFQ/Docker-Templates/main/a.xml", true},
 		{"repo in the repositories list with no app left in the feed", "https://raw.githubusercontent.com/someone/emptied-repo/main/a.xml", true},
 		{"gitlab repo", "https://gitlab.com/yayitazale/unraid-templates/-/raw/main/yayitazale/other.xml", true},
+		{"nested gitlab project listed only in the repositories list", "https://gitlab.com/group/sub/proj/-/raw/main/app.xml", true},
 		{"the user's own repo, never submitted to CA", "https://raw.githubusercontent.com/me/own-app/main/unraid/own-app.xml", false},
 		{"a lookalike owner", "https://raw.githubusercontent.com/hofq/docker-templates-fork/main/a.xml", false},
 		{"a host CA does not crawl", "https://git.example.org/hofq/docker-templates/raw/branch/main/a.xml", false},

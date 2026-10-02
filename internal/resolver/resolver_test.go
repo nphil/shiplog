@@ -719,6 +719,52 @@ func TestResolve_StaleDockerConfigLoginFallsBackToAnonymous(t *testing.T) {
 	}
 }
 
+// A realm that answers the credentialed token request with a redirect must not
+// get the login carried along: Go forwards Authorization to the same host (even
+// across an https→http downgrade) and to subdomains, which would put a stored
+// registry login on the wire in the clear or hand it to another name. The
+// redirect is not followed — the 3xx surfaces as an ordinary lookup error — so
+// the redirect target is never contacted at all. (Two loopback servers share a
+// host name, which is exactly the case Go would forward Authorization for.)
+func TestResolve_CredentialedTokenRequestNeverFollowsRedirect(t *testing.T) {
+	cases := []struct {
+		name  string
+		image string
+		set   func(r *Resolver, cfg string) *Resolver
+	}{
+		{"docker-config login", "git.example.org/o/app", func(r *Resolver, cfg string) *Resolver { return r.WithDockerConfig(cfg) }},
+		{"explicit GitHub token", "ghcr.io/o/app", func(r *Resolver, _ string) *Resolver { return r.WithGitHubToken("ghp_secret") }},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			target := newTokenRegistry(t, "")
+			registry := httptest.NewServer(nil)
+			defer registry.Close()
+			registry.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/token" {
+					http.Redirect(w, r, target.URL+"/token", http.StatusFound)
+					return
+				}
+				w.Header().Set("WWW-Authenticate", `Bearer realm="`+registry.URL+`/token",service="reg"`)
+				w.WriteHeader(http.StatusUnauthorized)
+			})
+			cfg := writeDockerConfig(t, `{"auths":{"git.example.org":{"username":"alice","password":"s3cret"}}}`)
+
+			r := c.set(newResolverFor(registry), cfg)
+			_, _, _, _, err := r.Resolve(context.Background(), c.image, "latest", "")
+			if err == nil {
+				t.Fatal("a redirecting token realm must fail the lookup, not succeed through the redirect")
+			}
+			if errors.Is(err, ErrRepoNotFound) {
+				t.Errorf("a redirect must never read as repository-not-found: %v", err)
+			}
+			if got := target.tokenAuths(); len(got) != 0 {
+				t.Errorf("the redirect target was contacted with Authorization %q; the login must never follow a redirect", got)
+			}
+		})
+	}
+}
+
 // Precedence on ghcr.io: an explicit GITHUB_TOKEN beats the docker-config login,
 // which in turn is used when no explicit token is set.
 func TestResolve_DockerConfigLoginPrecedenceOnGHCR(t *testing.T) {
