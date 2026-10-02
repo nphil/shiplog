@@ -33,6 +33,10 @@ Shows the changelog of your installed Docker containers, right in the Docker tab
 what changed from your running image to the newest, with a risk badge. Read-only,
 optional AI summaries (Ollama or llama-swap) and Matrix alerts.
 
+### 3.5.1
+🔧 **Fix** (nphil fork)
+- ShipLog could occasionally fail to come back after a restart (pressing Apply in the settings, or flipping the new per-container auto-update switch) and then stay stopped: the new process hit a briefly locked database and gave up at start-up. It now waits a few seconds for the lock instead.
+
 ### 3.5.0
 ✨ **Feature** (nphil fork)
 - Choose which containers auto-update may touch. Settings → Updates now lists your containers with a checkbox each: untick one and ShipLog will never auto-update it, so you can keep updating it by hand. Every other container auto-updates exactly as before, and manual updates, changelogs and risk badges are not affected. Nothing is excluded until you untick something. The list greys out, with a hint, while auto-update itself is off.
