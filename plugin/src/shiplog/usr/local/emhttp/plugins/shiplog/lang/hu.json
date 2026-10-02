@@ -120,5 +120,11 @@
   "d_autoSaving": "Mentés — a ShipLog újraindul…",
   "d_autoFailed": "A mentés nem sikerült. Töltsd újra az oldalt, és próbáld újra.",
   "d_autoOffBadge": "Automatikus frissítés kikapcsolva",
-  "d_autoOffBadgeHint": "Kizárva a ShipLog ütemezett automatikus frissítéséből — kattints a módosításhoz"
+  "d_autoOffBadgeHint": "Kizárva a ShipLog ütemezett automatikus frissítéséből — kattints a módosításhoz",
+  "s_au_pinned_desc": "A ShipLog soha nem frissíti automatikusan azokat a konténereket, amelyek egy adott verziócímkére vannak rögzítve (például :1.4.2), mert egy rögzített címke újbóli letöltése nem változtat semmit. Az újabb verzió csak tippként jelenik meg — a frissítéshez módosítsd te a címkét.",
+  "s_au_ct_newer": "rögzítve · újabb %v érhető el",
+  "d_newerPill": "rögzítve · újabb %v",
+  "d_newerChipHint": "újabb verzió (%v) érhető el — rögzítve, a frissítéshez módosítsd a címkét",
+  "d_newerNote": "Újabb verzió (%v) érhető el — a frissítéshez módosítsd a címkét.",
+  "d_newerWhy": "Ez a konténer a(z) %v verzióra van rögzítve, ezért az újbóli letöltése nem változtat semmit, és a ShipLog soha nem frissíti automatikusan."
 }

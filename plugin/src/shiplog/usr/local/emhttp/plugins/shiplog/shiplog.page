@@ -160,6 +160,8 @@ if ($lanip === '' && !empty($_SERVER['SERVER_ADDR'])) $lanip = $_SERVER['SERVER_
   .sl-ct-item input{margin:0;flex:none}
   .sl-ct-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .sl-ct-item small{flex:none;color:var(--dim2);font-size:11.5px}
+  .sl-ct-item.sl-ct-pin{flex-wrap:wrap;row-gap:0;padding:3px 0}
+  .sl-ct-item small.sl-ct-newer{color:var(--cc-info,#4f8fd6);flex:0 0 100%;padding-left:21px;margin-top:-3px;line-height:1.35}
   .sl-ct[data-disabled="1"]{opacity:.45}
   .sl-ct[data-disabled="1"] .sl-ct-item{cursor:default}
 
@@ -293,7 +295,7 @@ if ($lanip === '' && !empty($_SERVER['SERVER_ADDR'])) $lanip = $_SERVER['SERVER_
           <div class="sl-ct" id="sl-au-ct" role="group" aria-label="<?=htmlspecialchars($L['s_au_containers'])?>"></div>
           <input type="hidden" name="AUTOUPDATE_EXCLUDE_CONTAINERS" id="sl-au-skip" value="<?=htmlspecialchars($auSkip)?>">
         </div>
-        <div class="sl-desc"><?=$L['s_au_containers_desc']?></div></div>
+        <div class="sl-desc"><?=$L['s_au_containers_desc']?> <?=$L['s_au_pinned_desc']?></div></div>
       <div class="sl-row"><label><?=$L['s_au_digest']?></label>
         <div class="sl-in">
           <label class="sl-switch">
@@ -437,7 +439,9 @@ var SL_ON = <?=json_encode($onTxt)?>, SL_OFF = <?=json_encode($offTxt)?>;
         var n = res.d.length;
         a.innerHTML = '<span class="sl-res ok">' + SLT.s_running.replace('%n', n) + '</span>' +
           ' <span class="sl-hint">' + SLT.s_statuspage + ' <a href="http://' + host + ':' + port + '/" target="_blank" rel="noopener">' + SLT.s_open + '</a></span>';
-        slAuLoaded(res.d.map(function (s) { return s && s.container && s.container.name; }));
+        var nv = Object.create(null); // name -> newer version, for containers pinned to a version tag
+        res.d.forEach(function (s) { var n = s && s.container && s.container.name; if (n && s.newer_version) nv[n] = String(s.newer_version); });
+        slAuLoaded(res.d.map(function (s) { return s && s.container && s.container.name; }), nv);
       } else {
         a.innerHTML = '<span class="sl-res err">' + SLT.s_unreachable + '</span> <span class="sl-hint">' + SLT.s_unreachable_hint + '</span>';
         slAuLoaded(null);
@@ -548,18 +552,20 @@ slAuMode();
 // Apply can never silently drop an exclusion. Greyed out while auto-update itself is off.
 var SL_AU_SKIP = [];    // excluded names, as saved
 var SL_AU_NAMES = null; // container names from the engine; null = not loaded / engine unreachable
+var SL_AU_NEWER = Object.create(null); // name -> newer version (pinned-tag advisory); informational only
 var SL_AU_LOAD = 'loading';
 function slAuKey(s) { return String(s).toLowerCase(); }
-function slAuLoaded(names) { // called once the engine-status fetch above has answered
+function slAuLoaded(names, newer) { // called once the engine-status fetch above has answered
   var seen = {};
   SL_AU_NAMES = Array.isArray(names) ? names.filter(function (n) {
     if (!n || !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(n) || seen[n]) return false; // Docker's own name rule
     seen[n] = true; return true;
   }) : null;
   SL_AU_LOAD = SL_AU_NAMES ? 'ok' : 'down';
+  SL_AU_NEWER = (SL_AU_NAMES && newer) ? newer : Object.create(null);
   slAuRender();
 }
-function slAuItem(name, checked, gone) {
+function slAuItem(name, checked, gone, newer) {
   var l = document.createElement('label'); l.className = 'sl-ct-item';
   var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = checked;
   cb.setAttribute('data-name', name); cb.setAttribute('data-gone', gone ? '1' : '0');
@@ -567,6 +573,7 @@ function slAuItem(name, checked, gone) {
   var t = document.createElement('span'); t.className = 'sl-ct-name'; t.textContent = name;
   l.appendChild(cb); l.appendChild(t);
   if (gone) { var g = document.createElement('small'); g.textContent = SLT.s_au_ct_gone; l.appendChild(g); }
+  if (newer) { l.className += ' sl-ct-pin'; var nw = document.createElement('small'); nw.className = 'sl-ct-newer'; nw.textContent = SLT.s_au_ct_newer.replace('%v', function () { return newer; }); l.appendChild(nw); }
   return l;
 }
 function slAuRender() { // excluded containers first (so they never hide below the fold), then A-Z
@@ -577,7 +584,7 @@ function slAuRender() { // excluded containers first (so they never hide below t
   SL_AU_SKIP.forEach(function (n) { if (!have[slAuKey(n)]) rows.push({ name: n, off: true, gone: SL_AU_NAMES !== null }); });
   rows.sort(function (a, b) { return (b.off - a.off) || (slAuKey(a.name) < slAuKey(b.name) ? -1 : (slAuKey(a.name) > slAuKey(b.name) ? 1 : 0)); });
   box.textContent = '';
-  rows.forEach(function (r) { box.appendChild(slAuItem(r.name, !r.off, r.gone)); });
+  rows.forEach(function (r) { box.appendChild(slAuItem(r.name, !r.off, r.gone, r.gone ? '' : SL_AU_NEWER[r.name])); });
   slAuState();
 }
 function slAuSync(changed) { // a box was (un)ticked: rewrite the hidden field and un-grey Apply

@@ -722,16 +722,19 @@ func TestSweepIgnoreUnmanagedFiltersThirdParty(t *testing.T) {
 	}
 }
 
-// A rolling ":latest" whose resolved version actually moved (7.1.0 -> 7.2.0) must
-// be classified by that version delta (minor/medium), not the flat tag comparison
-// (latest vs latest -> digest/low) that cannot see the jump.
+// A rolling ":latest" whose image really moved AND whose new image is the newest
+// version tag (7.1.0 -> 7.2.0) must be classified by that version delta
+// (minor/medium), not the flat tag comparison (latest vs latest -> digest/low)
+// that cannot see the jump. The newest version's digest equals the floating
+// tag's new digest — that is what makes 7.2.0 the version latest points at.
 func TestSweepRollingTagUsesVersionDeltaForRisk(t *testing.T) {
 	col := fakeCollector{list: []model.Container{
 		{ID: "oc", Name: "opencloud", Repo: "ghcr.io/o/opencloud", Tag: "latest", Digest: "sha256:run", ImageVersion: "7.1.0"},
 	}}
 	res := fakeResolver{byRepo: map[string]resolveResult{
-		// rolling tag unchanged (latest==latest), but the resolved newest semver is 7.2.0
-		"ghcr.io/o/opencloud": {tag: "latest", dig: "sha256:new", verTag: "7.2.0", verDig: "sha256:v72"},
+		// rolling tag unchanged (latest==latest) but moved to sha256:new, which is
+		// exactly the newest semver tag 7.2.0's image
+		"ghcr.io/o/opencloud": {tag: "latest", dig: "sha256:new", verTag: "7.2.0", verDig: "sha256:new"},
 	}}
 	st := &fakeStore{}
 	e := New(col, res, &fakeChangelog{}, st, time.Hour)

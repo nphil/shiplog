@@ -195,6 +195,48 @@ func TestStatusPage(t *testing.T) {
 	}
 }
 
+// A pinned-tag advisory is information, not an update: the page says so in
+// words, does not count it among the "with updates", and the JSON API carries
+// the field the Docker tab and the settings page read.
+func TestPinnedAdvisoryIsNotCountedAsUpdate(t *testing.T) {
+	src := fakeSource{rows: []model.UpdateStatus{
+		{Container: model.Container{ID: "w", Name: "wyoming-openai", Repo: "ghcr.io/roryeckel/wyoming_openai", Tag: "0.6.1"},
+			RunningVersion: "0.6.1", NewestTag: "0.7.0", Kind: model.KindNone, Risk: model.RiskNone, NewerVersion: "0.7.0"},
+		{Container: model.Container{ID: "a", Name: "immich", Repo: "ghcr.io/x/immich", Tag: "1.2.0"},
+			NewestTag: "1.4.0", Kind: model.KindMinor, Risk: model.RiskMedium},
+	}}
+	h := New(src, &fakeOverrides{}, &fakeRefresher{}, "").Handler()
+
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequest("GET", "/", nil))
+	body := rr.Body.String()
+	if !strings.Contains(body, "2 containers &middot; 1 with updates") {
+		t.Errorf("only the real update may be counted, header was: %.200s", body[strings.Index(body, `class="meta"`):])
+	}
+	if !strings.Contains(body, "pinned, newer") || !strings.Contains(body, "0.7.0") || !strings.Contains(body, "change the tag") {
+		t.Errorf("the page must say the pinned container has a newer version to switch to")
+	}
+
+	rr = httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequest("GET", "/api/container/w", nil))
+	var got model.UpdateStatus
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.NewerVersion != "0.7.0" || got.Kind != model.KindNone {
+		t.Errorf("JSON must carry newer_version with kind none, got %+v", got)
+	}
+	if !strings.Contains(rr.Body.String(), `"newer_version":"0.7.0"`) {
+		t.Errorf("field name on the wire is part of the UI contract: %s", rr.Body.String())
+	}
+	// Rows without an advisory do not grow the field at all.
+	rr = httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequest("GET", "/api/container/a", nil))
+	if strings.Contains(rr.Body.String(), "newer_version") {
+		t.Errorf("newer_version must be omitted when empty: %s", rr.Body.String())
+	}
+}
+
 func TestLogo(t *testing.T) {
 	h, _ := testAPI()
 	rr := httptest.NewRecorder()

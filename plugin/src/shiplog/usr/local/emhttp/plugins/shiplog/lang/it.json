@@ -120,5 +120,11 @@
   "d_autoSaving": "Salvataggio — riavvio di ShipLog…",
   "d_autoFailed": "Salvataggio non riuscito. Ricarica la pagina e riprova.",
   "d_autoOffBadge": "Aggiornamento automatico disattivato",
-  "d_autoOffBadgeHint": "Escluso dall'aggiornamento automatico pianificato di ShipLog — clicca per cambiare"
+  "d_autoOffBadgeHint": "Escluso dall'aggiornamento automatico pianificato di ShipLog — clicca per cambiare",
+  "s_au_pinned_desc": "I container bloccati su un tag di versione specifico (ad esempio :1.4.2) non vengono mai aggiornati automaticamente da ShipLog, perché riscaricare un tag bloccato non cambia nulla. Una versione più recente viene mostrata solo come suggerimento: cambia tu il tag per aggiornare.",
+  "s_au_ct_newer": "bloccato · versione più recente %v disponibile",
+  "d_newerPill": "bloccato · più recente %v",
+  "d_newerChipHint": "versione più recente %v disponibile — bloccato, cambia il tag per aggiornare",
+  "d_newerNote": "Versione più recente %v disponibile — cambia il tag per aggiornare.",
+  "d_newerWhy": "Questo container è bloccato su %v, quindi riscaricarlo non cambia nulla e ShipLog non lo aggiorna mai automaticamente."
 }

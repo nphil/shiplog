@@ -86,6 +86,10 @@
     autoFailed: "Couldn't save. Reload the page and try again.",
     autoOffBadge: "Auto-update off",
     autoOffBadgeHint: "Excluded from ShipLog's scheduled auto-update — click to change",
+    newerPill: "pinned · newer %v",
+    newerChipHint: "newer version %v available — pinned, change the tag to update",
+    newerNote: "Newer version %v available — change the tag to update.",
+    newerWhy: "This container is pinned to %v, so re-pulling it changes nothing and ShipLog never auto-updates it.",
   };
   const I18N = (window.shiplogI18n && typeof window.shiplogI18n === "object") ? window.shiplogI18n : {};
   function T(k) { return I18N["d_" + k] || EN[k] || k; }
@@ -264,6 +268,17 @@
     return hasUpdate(st);
   }
 
+  // Pinned-tag advisory. The engine sets newer_version when the container's tag is a version tag, nothing
+  // new can be pulled for that tag, and a newer version tag exists in the registry. It is information only
+  // (kind/risk stay "none", so it is never an update). Unraid's live verdict still wins: if Unraid says an
+  // update exists the normal update UI shows and this stays quiet. Returns the newer version or "".
+  function newerVersion(st) {
+    if (!st || typeof st.newer_version !== "string" || isUpdate(st)) return "";
+    return st.newer_version.trim();
+  }
+  // Fill the %v placeholder; a function replacement so "$&"-style sequences in a version can't expand.
+  function fillV(s, v) { return String(s).replace("%v", () => v); }
+
   // Containers without an upstream to check (digest-pinned, image-ID-referenced,
   // locally built) must not look like an affirmed "up to date": neutral grey
   // dot + an honest label instead of the green pill.
@@ -394,7 +409,8 @@
     const seUpd = hasUpdate(st);    // ShipLog engine's own opinion (drives the risk detail)
     // up to date → green pill; no upstream to check → neutral grey, not green. When
     // Unraid flags an update ShipLog didn't grade (a rebuild / stale engine data), use low.
-    const rc = upd ? (seUpd ? riskClass(st) : "low") : (noUpstream(st) ? "grey" : "ok");
+    const nv = newerVersion(st);    // pinned-tag advisory: a newer version exists, but re-pulling changes nothing
+    const rc = upd ? (seUpd ? riskClass(st) : "low") : (nv ? "info" : (noUpstream(st) ? "grey" : "ok"));
     // changelog from/to are the image TAGS ("latest"/"7dtd"), not versions —
     // show a real version when we have one. Newest release tag comes from the
     // resolved release entries; current is the running tag if it looks like a
@@ -482,7 +498,7 @@
     const verHdr = (upd && haveNext) ? `${esc(cur)} → <b>${esc(next)}</b>` : `<b>${esc(cur)}</b>`;
     const pillTxt = upd
       ? esc(seUpd ? kindLabel(st) : T("update"))
-      : esc(noUpstream(st) ? noUpstreamLabel(st) : T("uptodate"));
+      : (nv ? esc(fillV(T("newerPill"), nv)) : esc(noUpstream(st) ? noUpstreamLabel(st) : T("uptodate")));
 
     // #47: a critical pill already carries the warning glyph — the plain risk dot
     // next to it is a second, redundant "pay attention" signal. Show one or the
@@ -499,6 +515,7 @@
       </div>
       ${st.unmaintained ? `<div class="sl-unmaint-note"><h4>⚠ ${esc(T("unmaintained"))}</h4>${esc(st.unmaintained_reason || T("unmaintained"))}. ${esc(T("unmaintainedHint"))}</div>` : ""}
       ${!st.unmaintained && st.ca_deprecated ? `<div class="sl-unmaint-note sl-dep-note"><h4>⚠ ${esc(T("deprecated"))}</h4>${esc(st.ca_deprecated_note || T("deprecated"))}</div>` : ""}
+      ${nv ? `<div class="sl-unmaint-note sl-newer-note"><h4>ⓘ ${esc(T("pinned"))}</h4><div>${esc(fillV(T("newerNote"), nv))}</div><div class="sl-newer-why">${esc(fillV(T("newerWhy"), cur))}</div></div>` : ""}
       ${autoHTML(st)}${summary}${raw}
       ${src ? `<div class="sl-bf"><span>${src}</span></div>` : ""}`;
   }
@@ -868,10 +885,11 @@
         chip = el("a", "sl-chip sl-dep", `${WARN_ICON}<span>${esc(T("deprecated"))}</span>`);
         chip.title = `ShipLog: ${st.ca_deprecated_note || T("deprecated")}`;
       } else {
-        const rc = upd ? (seUpd ? riskClass(st) : "low") : (noUpstream(st) ? "grey" : "ok");
+        const nv = newerVersion(st); // pinned-tag advisory: keep the chip, calm blue dot + explanatory tooltip
+        const rc = upd ? (seUpd ? riskClass(st) : "low") : (nv ? "info" : (noUpstream(st) ? "grey" : "ok"));
         const label = upd ? (seUpd ? kindLabel(st) : T("update")) : T("uptodate");
         chip = el("a", "sl-chip", `${LOG_ICON}<span>${esc(T("changelog"))}</span><span class="sl-amp sl-${rc}"></span>`);
-        chip.title = `ShipLog: ${label} — ${T("clickHint")}`;
+        chip.title = nv ? `ShipLog: ${fillV(T("newerChipHint"), nv)}` : `ShipLog: ${label} — ${T("clickHint")}`;
       }
       chip.href = "#";
       chip.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openFor(chip, st); });

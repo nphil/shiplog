@@ -145,6 +145,92 @@ func TestUnmaintainedAndCADeprecatedRoundTrip(t *testing.T) {
 	}
 }
 
+// The pinned-tag advisory (NewerVersion) must round-trip through the store AND
+// disappear again when a later sweep no longer has it (the tag was changed, or
+// the newer version was withdrawn) — an Upsert replaces the column, it never
+// keeps a stale "newer version" around.
+func TestNewerVersionRoundTripAndClears(t *testing.T) {
+	s := newTestStore(t)
+	st := model.UpdateStatus{
+		Container: model.Container{ID: "wyo", Name: "wyoming-openai", Repo: "ghcr.io/roryeckel/wyoming_openai", Tag: "0.6.1"},
+		NewestTag: "0.7.0",
+		Kind:      model.KindNone, Risk: model.RiskNone, CheckedAt: time.Now(),
+		NewerVersion: "0.7.0",
+	}
+	if err := s.Upsert(st); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Get("wyo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.NewerVersion != "0.7.0" || !got.Advisory() || got.HasUpdate() {
+		t.Fatalf("advisory did not round-trip: newer=%q advisory=%v hasUpdate=%v", got.NewerVersion, got.Advisory(), got.HasUpdate())
+	}
+	rows, err := s.List()
+	if err != nil || len(rows) != 1 || rows[0].NewerVersion != "0.7.0" {
+		t.Fatalf("List must carry the advisory too: %+v, %v", rows, err)
+	}
+
+	st.NewerVersion = ""
+	if err := s.Upsert(st); err != nil {
+		t.Fatal(err)
+	}
+	got, err = s.Get("wyo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.NewerVersion != "" || got.Advisory() {
+		t.Fatalf("a later sweep without the advisory must clear it, still %q", got.NewerVersion)
+	}
+}
+
+// A database written by an older ShipLog (no newer_version column) must open,
+// keep its rows (reading the advisory back as empty) and accept new upserts.
+func TestOpenMigratesDatabaseWithoutNewerVersion(t *testing.T) {
+	path := t.TempDir() + "/shiplog.db"
+	old, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := old.Exec(`CREATE TABLE status (
+		container_id TEXT PRIMARY KEY, name TEXT, repo TEXT, image TEXT, tag TEXT, digest TEXT,
+		pinned_digest TEXT, is_local INTEGER, managed INTEGER, running_version TEXT,
+		newest_tag TEXT, newest_digest TEXT, kind TEXT, risk TEXT, risk_reason TEXT,
+		changelog_json TEXT, checked_at TEXT, error TEXT,
+		unmaintained INTEGER, unmaintained_reason TEXT, ca_deprecated INTEGER, ca_deprecated_note TEXT)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := old.Exec(`INSERT INTO status (container_id, name, repo, image, tag, digest, newest_tag, newest_digest, kind, risk, risk_reason, changelog_json, checked_at, error)
+		VALUES ('sonarr', 'sonarr', 'lscr.io/linuxserver/sonarr', 'lscr.io/linuxserver/sonarr:latest', 'latest', 'sha256:f247', 'latest', 'sha256:f247', 'major', 'high', 'old phantom', '', '2026-10-02T08:53:00Z', '')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := old.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("a pre-3.6.0 database must still open: %v", err)
+	}
+	defer func() { _ = s.Close() }()
+	got, err := s.Get("sonarr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Kind != model.KindMajor || got.NewerVersion != "" {
+		t.Fatalf("legacy row should read back unchanged with no advisory, got kind=%s newer=%q", got.Kind, got.NewerVersion)
+	}
+	got.Kind, got.Risk, got.NewerVersion = model.KindNone, model.RiskNone, "5.0"
+	if err := s.Upsert(got); err != nil {
+		t.Fatalf("upsert into the migrated table: %v", err)
+	}
+	again, err := s.Get("sonarr")
+	if err != nil || again.NewerVersion != "5.0" || again.Kind != model.KindNone {
+		t.Fatalf("migrated table did not take the new column: %+v, %v", again, err)
+	}
+}
+
 func TestHistoryAppendOnVersionChange(t *testing.T) {
 	s := newTestStore(t)
 	base := model.UpdateStatus{Container: model.Container{ID: "abc", Name: "immich", Tag: "1.122.0"}, RunningVersion: "1.122.0", CheckedAt: time.Now()}

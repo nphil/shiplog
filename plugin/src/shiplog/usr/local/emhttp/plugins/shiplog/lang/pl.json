@@ -120,5 +120,11 @@
   "d_autoSaving": "Zapisywanie — ShipLog się restartuje…",
   "d_autoFailed": "Nie udało się zapisać. Odśwież stronę i spróbuj ponownie.",
   "d_autoOffBadge": "Aktualizacja automatyczna wyłączona",
-  "d_autoOffBadgeHint": "Wykluczony z zaplanowanej automatycznej aktualizacji ShipLog — kliknij, aby zmienić"
+  "d_autoOffBadgeHint": "Wykluczony z zaplanowanej automatycznej aktualizacji ShipLog — kliknij, aby zmienić",
+  "s_au_pinned_desc": "Kontenery przypięte do konkretnego tagu wersji (na przykład :1.4.2) nigdy nie są aktualizowane automatycznie przez ShipLog, ponieważ ponowne pobranie przypiętego tagu niczego nie zmienia. Nowsza wersja jest pokazywana tylko jako wskazówka — aby zaktualizować, zmień tag samodzielnie.",
+  "s_au_ct_newer": "przypięte · dostępna nowsza %v",
+  "d_newerPill": "przypięte · nowsza %v",
+  "d_newerChipHint": "dostępna nowsza wersja %v — przypięte, zmień tag, aby zaktualizować",
+  "d_newerNote": "Dostępna nowsza wersja %v — zmień tag, aby zaktualizować.",
+  "d_newerWhy": "Ten kontener jest przypięty do wersji %v, więc ponowne pobranie niczego nie zmieni, a ShipLog nigdy nie aktualizuje go automatycznie."
 }

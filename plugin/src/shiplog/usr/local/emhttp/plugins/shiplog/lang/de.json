@@ -120,5 +120,11 @@
   "d_autoSaving": "Speichern — ShipLog wird neu gestartet…",
   "d_autoFailed": "Speichern fehlgeschlagen. Seite neu laden und erneut versuchen.",
   "d_autoOffBadge": "Auto-Update aus",
-  "d_autoOffBadgeHint": "Vom geplanten Auto-Update von ShipLog ausgeschlossen — zum Ändern klicken"
+  "d_autoOffBadgeHint": "Vom geplanten Auto-Update von ShipLog ausgeschlossen — zum Ändern klicken",
+  "s_au_pinned_desc": "Container, die auf ein bestimmtes Versions-Tag festgelegt (gepinnt) sind, aktualisiert ShipLog nie automatisch, weil ein erneutes Pullen eines gepinnten Tags nichts ändert. Eine neuere Version wird nur als Hinweis angezeigt — ändere das Tag selbst, um zu aktualisieren.",
+  "s_au_ct_newer": "gepinnt · neuere Version %v verfügbar",
+  "d_newerPill": "gepinnt · neuer %v",
+  "d_newerChipHint": "neuere Version %v verfügbar — gepinnt, Tag ändern zum Aktualisieren",
+  "d_newerNote": "Neuere Version %v verfügbar — ändere das Tag, um zu aktualisieren.",
+  "d_newerWhy": "Dieser Container ist auf %v gepinnt, ein erneutes Pullen ändert daher nichts und ShipLog aktualisiert ihn nie automatisch."
 }

@@ -120,5 +120,11 @@
   "d_autoSaving": "Kaydediliyor — ShipLog yeniden başlatılıyor…",
   "d_autoFailed": "Kaydedilemedi. Sayfayı yeniden yükleyip tekrar dene.",
   "d_autoOffBadge": "Otomatik güncelleme kapalı",
-  "d_autoOffBadgeHint": "ShipLog'un zamanlanmış otomatik güncellemesinden hariç tutuldu — değiştirmek için tıkla"
+  "d_autoOffBadgeHint": "ShipLog'un zamanlanmış otomatik güncellemesinden hariç tutuldu — değiştirmek için tıkla",
+  "s_au_pinned_desc": "Belirli bir sürüm etiketine (örneğin :1.4.2) sabitlenmiş kapsayıcıları ShipLog asla otomatik güncellemez; çünkü sabitlenmiş bir etiketi yeniden çekmek hiçbir şeyi değiştirmez. Daha yeni sürüm yalnızca ipucu olarak gösterilir — güncellemek için etiketi kendin değiştir.",
+  "s_au_ct_newer": "sabitlendi · daha yeni %v mevcut",
+  "d_newerPill": "sabitlendi · daha yeni %v",
+  "d_newerChipHint": "daha yeni sürüm %v mevcut — sabitlendi, güncellemek için etiketi değiştir",
+  "d_newerNote": "Daha yeni sürüm %v mevcut — güncellemek için etiketi değiştir.",
+  "d_newerWhy": "Bu konteyner %v sürümüne sabitlenmiş; bu yüzden yeniden çekmek hiçbir şeyi değiştirmez ve ShipLog onu asla otomatik güncellemez."
 }

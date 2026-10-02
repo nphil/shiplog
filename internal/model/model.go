@@ -81,6 +81,15 @@ type UpdateStatus struct {
 	Kind           Kind      `json:"kind"`
 	Risk           RiskLevel `json:"risk"`
 	RiskReason     string    `json:"risk_reason"`
+	// NewerVersion is a pinned-tag ADVISORY, on its own axis next to Kind/Risk:
+	// the newest version tag in the registry, set only when the container is
+	// pinned to a specific version tag, re-pulling that tag cannot fetch
+	// anything new (the registry still serves the image already running), and a
+	// newer version tag exists. Kind stays KindNone in that case, so it is never
+	// an update: not counted, not notified, never auto-applied — the only way to
+	// reach the newer version is to change the tag. Empty when there is nothing
+	// to advise.
+	NewerVersion string `json:"newer_version,omitempty"`
 	// Unmaintained flags an installed app that has reached a dead end, on a
 	// separate axis from the update Risk (an app can be up to date AND
 	// unmaintained): its Unraid template was removed from Community Applications,
@@ -126,6 +135,11 @@ func (c Container) HasDigest(d string) bool {
 
 // HasUpdate reports whether this status represents an actionable update.
 func (s UpdateStatus) HasUpdate() bool { return s.Kind != KindNone && s.Kind != "" }
+
+// Advisory reports whether this status is a pinned-tag advisory: a newer
+// version tag exists, but nothing can be pulled for the tag the container is
+// pinned to. It is information, never an update (HasUpdate is false).
+func (s UpdateStatus) Advisory() bool { return s.NewerVersion != "" && !s.HasUpdate() }
 
 // Changelog is the resolved "what changed" payload for an update.
 type Changelog struct {

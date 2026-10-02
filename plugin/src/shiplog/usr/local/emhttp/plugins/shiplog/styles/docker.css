@@ -22,6 +22,10 @@
 .sl-amp.sl-crit{background:#ff3b30;animation:sl-pulse 1.6s ease-in-out infinite}
 .sl-amp.sl-grey{background:#8a8a8a}
 .sl-amp.sl-ok  {background:#3fae6a}
+/* info = pinned-tag advisory (a newer version exists, but the tag is pinned so nothing can be pulled).
+   Not an update and not a problem: a calm blue RING (hollow, so it also differs from the filled
+   green/amber/red/grey dots without relying on hue alone). Mid-tone blue reads on light and dark rows. */
+.sl-amp.sl-info{background:transparent;box-sizing:border-box;border:2px solid #4f8fd6}
 @keyframes sl-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,48,.55)}50%{box-shadow:0 0 0 4px rgba(255,59,48,0)}}
 @media (prefers-reduced-motion:reduce){.sl-amp.sl-crit{animation:none}}
 
@@ -47,6 +51,9 @@ html.cc-header-on .sl-autoff{border:none;background:rgba(128,128,128,.18)}
 .sl-pill.sl-crit{color:#fff;background:#c81e28;border-color:#c81e28} .sl-pill.sl-crit .sl-dot{background:#fff}
 .sl-pill.sl-grey{color:#9a9a9a;border-color:#444}    .sl-pill.sl-grey .sl-dot{background:#8a8a8a}
 .sl-pill.sl-ok  {color:#3fae6a;border-color:#2f6b46} .sl-pill.sl-ok   .sl-dot{background:#3fae6a}
+/* pinned-tag advisory pill: calm blue, outlined like the routine pills (never filled like crit/unmaint). */
+.sl-pill.sl-info{color:#6aa5e8;border-color:#35608f} .sl-pill.sl-info .sl-dot{background:transparent;box-sizing:border-box;border:2px solid #6aa5e8}
+.sl-bubble.sl-light .sl-pill.sl-info{color:#1f5fa8;border-color:#8fb2dc} .sl-bubble.sl-light .sl-pill.sl-info .sl-dot{border-color:#1f5fa8}
 /* GlimStone (CC installed): CC badges are a SOLID tinted fill, never an outline of any kind (a
    box-shadow ring is still visually a border line, just drawn differently — see the .sl-bubble
    card block below for the same lesson at section scale). 18% tint matches CC's own neutral-chip
@@ -57,6 +64,7 @@ html.cc-header-on .sl-pill.sl-mid {background:color-mix(in srgb, #d6a243 18%, tr
 html.cc-header-on .sl-pill.sl-high{background:color-mix(in srgb, #d9534f 18%, transparent)}
 html.cc-header-on .sl-pill.sl-grey{background:color-mix(in srgb, #9a9a9a 18%, transparent)}
 html.cc-header-on .sl-pill.sl-ok  {background:color-mix(in srgb, #3fae6a 18%, transparent)}
+html.cc-header-on .sl-pill.sl-info{background:color-mix(in srgb, #4f8fd6 18%, transparent)}
 /* #47/#48/#50 (user, live-verified): sl-crit/sl-unmaint/sl-dep are a PERSISTENT problem state, not
    a routine risk level - the general currentColor-tint rule above was meant to skip them (see the
    old comment removed here: "already a solid fill natively, need no change"), but nothing here
@@ -92,6 +100,13 @@ html.cc-header-on .sl-pill.sl-unmaint{border:none}   /* already a solid fill nat
 .sl-pill.sl-dep{color:#1a1a1a;background:#d6a243;border-color:#d6a243} .sl-pill.sl-dep .sl-dot{background:#1a1a1a}
 html.cc-header-on .sl-pill.sl-dep{border:none}
 .sl-dep-note{background:rgba(214,162,67,.15);color:#d6a243}
+
+/* Pinned-tag advisory note in the bubble: the same block as the notes above, informational blue instead of
+   red/amber. A lighter blue on the dark bubble, a deeper blue on the light one. With CC installed the block
+   becomes a card (rules below) and only the straddling h4 badge carries the colour. */
+.sl-newer-note{background:rgba(79,143,214,.14);color:#7db3ec}
+.sl-bubble.sl-light .sl-newer-note{background:rgba(31,95,168,.09);color:#1f5fa8}
+.sl-newer-note .sl-newer-why{margin-top:4px;font-size:12px;opacity:.85}
 
 /* CC-popup design: a blurred + dimmed backdrop behind a CENTERED window. The backdrop dim/blur, the window
    surface and the corner radius READ CannonadeCommand's theme tokens when CC is installed (so ShipLog's
@@ -262,6 +277,7 @@ html.cc-header-on .sl-bubble .sl-unmaint-note h4{
   position:absolute;top:0;left:14px;transform:translateY(-50%);margin:0;
 }
 html.cc-header-on .sl-bubble .sl-dep-note h4{background:var(--cc-warn,#e0912a);color:#1a1207}
+html.cc-header-on .sl-bubble .sl-newer-note h4{background:var(--cc-info,#3b82d0);color:#fff}
 /* #35b (user: "jetzt haben wir drei ebenen ... soll nur zwei ebenen sein"): this used to re-paint the
    window's own dark --sl-bg INSIDE the light --sl-card section - a third, visually distinct shade the
    locked reference never has (frame + card, nothing nested a third tone). Let it blend into its parent

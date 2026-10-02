@@ -8,6 +8,12 @@ import (
 
 func st(k model.Kind) model.UpdateStatus { return model.UpdateStatus{Kind: k} }
 
+// advisory is a pinned-tag advisory status: up to date (Kind none) with a newer
+// version tag the container cannot reach by pulling its own tag.
+func advisory(newer string) model.UpdateStatus {
+	return model.UpdateStatus{Kind: model.KindNone, Risk: model.RiskNone, NewerVersion: newer}
+}
+
 func TestEligible(t *testing.T) {
 	cases := []struct {
 		name string
@@ -25,6 +31,11 @@ func TestEligible(t *testing.T) {
 		{"unknown never", st(model.KindUnknown), Policy{Level: LevelMajor, Digest: true}, false},
 		{"none never", st(model.KindNone), Policy{Level: LevelMajor, Digest: true}, false},
 		{"off nothing", st(model.KindPatch), Policy{Level: LevelOff}, false},
+		// wyoming-openai: pinned to :0.6.1 while 0.7.0 exists. Nothing can be pulled
+		// for a pinned tag, so it is advisory information and never auto-applied,
+		// whatever the level and with or without the digest toggle.
+		{"pinned advisory at major+digest", advisory("0.7.0"), Policy{Level: LevelMajor, Digest: true}, false},
+		{"pinned advisory at patch", advisory("0.7.0"), Policy{Level: LevelPatch}, false},
 	}
 	for _, c := range cases {
 		if got := Eligible(c.st, c.p); got != c.want {

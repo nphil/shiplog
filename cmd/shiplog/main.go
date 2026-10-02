@@ -40,9 +40,11 @@ func main() {
 	defer func() { _ = db.Close() }()
 
 	// Collaborators. The changelog chain tries GitHub (via the OCI source label)
-	// then always-succeeds with the fallback.
+	// then always-succeeds with the fallback. One read-only Docker client serves
+	// both the engine's sweep and the auto-update executor's before/after checks.
+	docker := dockercli.New(cfg.DockerSocket)
 	eng := engine.New(
-		dockercli.New(cfg.DockerSocket),
+		docker,
 		resolver.New().
 			WithDockerHubAuth(cfg.DockerHubUser, cfg.DockerHubToken).
 			WithGitHubToken(cfg.GithubToken),
@@ -111,7 +113,7 @@ func main() {
 		if !upd.Supported() {
 			log.Printf("shiplog: auto-update is enabled but not supported here (needs the Unraid plugin / template dir) — skipping")
 		} else {
-			exec := autoupdate.NewExecutor(db, upd)
+			exec := autoupdate.NewExecutor(db, docker, upd)
 			go runAutoUpdate(ctx, cfg.AutoUpdate, exec, db, notifier)
 			log.Printf("shiplog: auto-update ON (level=%s, digest=%v, schedule=%s, dry-run=%v)",
 				cfg.AutoUpdate.Level, cfg.AutoUpdate.Digest, cfg.AutoUpdate.SchedMode, cfg.AutoUpdate.DryRun)
@@ -186,7 +188,7 @@ func runAutoUpdate(ctx context.Context, cfg config.AutoUpdateConfig, exec *autou
 		res := exec.Run(ctx, policy, cfg.DryRun)
 		if !res.DryRun {
 			for _, o := range res.Outcomes {
-				if o.Blocked || o.Skipped {
+				if o.Blocked || o.Skipped || o.UpToDate {
 					continue // never applied — not an action, so not part of the audit log
 				}
 				errStr := ""

@@ -5,6 +5,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -34,7 +35,9 @@ type (
 	// Resolver returns, for an image ref: the newest tag (requested tag echoed if
 	// non-semver) and its same-tag digest for risk/digest-drift, plus the newest
 	// SEMVER version tag and that version's digest (to prove a rolling container's
-	// running version).
+	// running version). The newest version tag is only the numerically highest
+	// one: it is the version a floating tag points at ONLY when its digest equals
+	// sameTagDigest (see trustedVersion).
 	Resolver interface {
 		Resolve(ctx context.Context, repo, tag, curDigest string) (newestTag, sameTagDigest, newestVerTag, newestVerDigest string, err error)
 	}
@@ -421,24 +424,8 @@ func (e *Engine) check(ctx context.Context, c model.Container, resolve resolveFu
 	st.NewestDigest = newestDigest
 	st.RunningVersion = decideRunningVersion(c, newestVerTag, newestVerDigest, prior, hasPrior)
 
-	// An image pulled via a mirror carries one RepoDigests entry per registry;
-	// when the remote digest matches ANY of them the image is current, so feed
-	// Classify the matching digest instead of flagging a phantom drift.
-	curDigest := c.Digest
-	if c.HasDigest(newestDigest) {
-		curDigest = newestDigest
-	}
-	kind, level, reason := risk.Classify(c.Tag, newestTag, curDigest, newestDigest)
-	// A rolling tag (":latest") makes the raw tag comparison blind to the real
-	// jump — latest vs latest looks like a flat "digest, low risk". When we
-	// resolved two real versions, classify by that delta instead, so an actual
-	// minor/major update shows the right risk (orange/red) rather than "digest".
-	if isVersion(st.RunningVersion) && isVersion(newestVerTag) {
-		if vk, vl, vr := risk.Classify(st.RunningVersion, newestVerTag, "", ""); vk != model.KindUnknown && vk != model.KindNone {
-			kind, level, reason = vk, vl, vr
-		}
-	}
-	st.Kind, st.Risk, st.RiskReason = kind, level, reason
+	v := classify(c, st.RunningVersion, newestTag, newestDigest, newestVerTag, newestVerDigest)
+	st.Kind, st.Risk, st.RiskReason, st.NewerVersion = v.kind, v.risk, v.reason, v.newer
 
 	// Resolve a changelog for EVERY container, so each can show one: the update
 	// span when there's an update, or the running version's release notes when it
@@ -446,14 +433,16 @@ func (e *Engine) check(ctx context.Context, c model.Container, resolve resolveFu
 	//
 	// Ask across the real version span when we know both ends: a rolling
 	// (":latest") jump carries no version in its tag, so pass the RESOLVED running
-	// and newest versions instead. That yields every intermediate release — where
-	// a breaking note usually hides — not just the single newest one.
+	// and trusted newest versions instead. That yields every intermediate release
+	// — where a breaking note usually hides — not just the single newest one.
+	// The end of the span comes from classify, which only ever names a version it
+	// can vouch for; the registry's numerically highest tag is NOT such a version.
 	clFrom, clTo := c.Tag, newestTag
 	if isVersion(st.RunningVersion) {
 		clFrom = st.RunningVersion
 	}
-	if isVersion(newestVerTag) {
-		clTo = newestVerTag
+	if v.to != "" {
+		clTo = v.to
 	}
 	if cl, ok := e.changelog.Get(ctx, c, clFrom, clTo); ok {
 		st.Changelog = cl
@@ -657,6 +646,101 @@ func decideRunningVersion(c model.Container, newestVerTag, newestVerDigest strin
 
 // isVersion reports whether a tag looks like a version number (e.g. "1.8", "v2.3.1").
 func isVersion(tag string) bool { return versionLike.MatchString(tag) }
+
+// verdict is the engine's call on one container: what (if anything) pulling its
+// own tag would deliver, plus the pinned-tag advisory and the changelog target.
+type verdict struct {
+	kind   model.Kind
+	risk   model.RiskLevel
+	reason string
+	// newer is the pinned-tag advisory (model.UpdateStatus.NewerVersion); set
+	// only together with KindNone.
+	newer string
+	// to is the version the changelog span should end at; "" means "the newest
+	// tag", which for a rolling container is just the tag itself (recent notes).
+	to string
+}
+
+// classify decides what, if anything, re-pulling the container's OWN tag would
+// deliver. The digest behind that tag is the only thing a pull can fetch, so it
+// alone decides whether there is an update; versions only ever LABEL a real
+// move or ADVISE about a newer tag, they never create an update:
+//
+//   - Rolling tag (":latest", ":stable", ...): same digest → up to date, no
+//     matter which version tags the registry also holds. A digest move is
+//     relabelled patch/minor/major only when the registry's newest version tag
+//     points at the very image the floating tag now serves (the "twin") — that
+//     is the one version we can vouch for. The numerically highest tag is often
+//     unrelated (an old date tag, another release channel), so any other tag is
+//     ignored and the move stays a plain "digest".
+//   - Version tag (pinned, ":0.6.1"): a newer version tag cannot be reached by
+//     pulling the tag the container is pinned to. It is an update only when
+//     that tag itself now serves a different image; otherwise it is advisory
+//     (Kind none, NewerVersion set) and never auto-applied.
+//
+// running is the version the container is believed to run (decideRunningVersion).
+func classify(c model.Container, running, newestTag, newestDigest, newestVerTag, newestVerDigest string) verdict {
+	// An image pulled via a mirror carries one RepoDigests entry per registry;
+	// when the remote digest matches ANY of them the image is current, so feed
+	// Classify the matching digest instead of flagging a phantom drift.
+	curDigest := c.Digest
+	if c.HasDigest(newestDigest) {
+		curDigest = newestDigest
+	}
+	kind, level, reason := risk.Classify(c.Tag, newestTag, curDigest, newestDigest)
+	v := verdict{kind: kind, risk: level, reason: reason}
+
+	switch kind {
+	case model.KindNone:
+		// Up to date: show the notes of the version it runs, not of some tag the
+		// registry happens to sort higher.
+		if isVersion(running) {
+			v.to = running
+		}
+
+	case model.KindDigest:
+		// The tag moved under the running image: a real update. Name its size by
+		// version only when the registry's newest version tag IS the new image.
+		if verTag := trustedVersion(newestDigest, newestVerTag, newestVerDigest); verTag != "" {
+			v.to = verTag
+			if isVersion(running) && isVersion(verTag) {
+				if vk, vl, vr := risk.Classify(running, verTag, "", ""); vk != model.KindUnknown && vk != model.KindNone {
+					v.kind, v.risk, v.reason = vk, vl, vr
+				}
+			}
+		}
+
+	case model.KindPatch, model.KindMinor, model.KindMajor:
+		// The container's tag is a version and a newer version tag exists. That is
+		// an update only if pulling the tag fetches a different image; with the
+		// same (or unknown) image behind it the newer version is out of reach.
+		if tagMoved(c, newestDigest) {
+			break
+		}
+		v.kind, v.risk = model.KindNone, model.RiskNone
+		v.reason = fmt.Sprintf("pinned to %s — newer version %s available; change the tag to update", c.Tag, newestTag)
+		v.newer = newestTag
+	}
+	return v
+}
+
+// trustedVersion returns the registry's newest version tag when it is the very
+// image the container's floating tag serves now (same digest), else "". Only
+// then is the tag a statement about what ":latest" points at; any other
+// version tag is merely the numerically highest one.
+func trustedVersion(newestDigest, newestVerTag, newestVerDigest string) string {
+	if newestVerTag != "" && newestVerDigest != "" && newestVerDigest == newestDigest {
+		return newestVerTag
+	}
+	return ""
+}
+
+// tagMoved reports whether the container's own tag now serves a different image
+// than the one running — i.e. whether pulling it would change anything. It needs
+// both digests: with either unknown nothing can be claimed.
+func tagMoved(c model.Container, tagDigest string) bool {
+	return c.Digest != "" && tagDigest != "" && !c.HasDigest(tagDigest)
+}
 
 // maybeNotify pushes a notification only when a *new* update appears for a
 // container we've already seen: the prior row must exist (so we don't flood on

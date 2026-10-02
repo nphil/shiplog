@@ -112,6 +112,11 @@ func MatchedExcludeWord(cl *model.Changelog, words []string) string {
 // Eligible reports whether the container's available update should be applied
 // under the policy. Unknown (non-SemVer) bumps are never eligible; digest moves
 // only via the separate toggle; SemVer bumps only at or below the threshold.
+//
+// A pinned-tag advisory (model.UpdateStatus.Advisory: the container is pinned to
+// a version tag and a newer version tag exists) is not an update — its Kind is
+// none, because re-pulling the pinned tag fetches nothing — so it is never
+// eligible, at any level and with or without the digest toggle.
 func Eligible(st model.UpdateStatus, p Policy) bool {
 	if !st.HasUpdate() {
 		return false

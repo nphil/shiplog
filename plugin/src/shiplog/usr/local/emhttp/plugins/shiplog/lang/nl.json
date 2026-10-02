@@ -120,5 +120,11 @@
   "d_autoSaving": "Opslaan — ShipLog wordt herstart…",
   "d_autoFailed": "Opslaan mislukt. Laad de pagina opnieuw en probeer het nog eens.",
   "d_autoOffBadge": "Automatisch bijwerken uit",
-  "d_autoOffBadgeHint": "Uitgesloten van het geplande automatisch bijwerken van ShipLog — klik om te wijzigen"
+  "d_autoOffBadgeHint": "Uitgesloten van het geplande automatisch bijwerken van ShipLog — klik om te wijzigen",
+  "s_au_pinned_desc": "Containers die zijn vastgezet op een specifieke versietag (bijvoorbeeld :1.4.2) worden nooit automatisch bijgewerkt door ShipLog, omdat het opnieuw ophalen van een vastgezette tag niets verandert. Een nieuwere versie wordt alleen als hint getoond — wijzig de tag zelf om bij te werken.",
+  "s_au_ct_newer": "vastgezet · nieuwere %v beschikbaar",
+  "d_newerPill": "vastgezet · nieuwer %v",
+  "d_newerChipHint": "nieuwere versie %v beschikbaar — vastgezet, wijzig de tag om bij te werken",
+  "d_newerNote": "Nieuwere versie %v beschikbaar — wijzig de tag om bij te werken.",
+  "d_newerWhy": "Deze container is vastgezet op %v, dus opnieuw ophalen verandert niets en ShipLog werkt hem nooit automatisch bij."
 }
