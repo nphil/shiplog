@@ -33,6 +33,13 @@ Shows the changelog of your installed Docker containers, right in the Docker tab
 what changed from your running image to the newest, with a risk badge. Read-only,
 optional AI summaries (Ollama or llama-swap) and Matrix alerts.
 
+### 3.6.1
+🔧 **Fix** (nphil fork)
+- Apps you build and publish yourself are no longer branded "Discontinued". An app whose template points into your own GitHub repo (public or private) was never in Community Applications, yet ShipLog read "not in the Community Applications list" as "removed from it". ShipLog now gives a Community Applications verdict only to an app that really came from there, meaning its template lives in a repository Community Applications crawls. Your own apps are left alone, with no per-app workaround needed, and a wrong flag that was already set clears by itself at the next check.
+- A private or unreachable image can no longer read as "removed". ShipLog only says "Image no longer in the registry" when the registry itself answers "repository unknown"; a missing login, a private package or any other unclear answer leaves the app unflagged.
+- ShipLog now reads private images with the same registry logins Unraid itself uses (the Docker login in /root/.docker, which Unraid's own update check reads too), for example a private GitHub package or your own Gitea registry. There is nothing to set up, and a login is only ever sent to its own registry.
+- New checklist for apps you publish yourself, so Unraid's update column and ShipLog both stay right: docs/own-apps-checklist.md in the ShipLog repository.
+
 ### 3.6.0
 🔧 **Fix** (nphil fork)
 - Containers are no longer restarted every morning for updates that do not exist. ShipLog now decides "up to date" by the image behind a container's own tag: if the registry serves the image the container already runs, there is nothing to update, whatever other version tags the registry also holds. Before, a container on a rolling tag such as latest could be flagged as a "major" update because the registry also lists some unrelated tag that sorts higher (an old date tag, or another release channel), and auto-update then pulled, restarted and logged it as updated every day. Sonarr, Tautulli and NZBGet were hit this way.
