@@ -105,5 +105,20 @@
   "s_au_dryrun": "Prøvekørsel",
   "s_au_dryrun_desc": "Anvend ikke noget — send blot en notifikation om, hvad der VILLE blive opdateret. Brug dette først for at se planen, før du aktiverer rigtige opdateringer.",
   "s_au_unit_hours": "timer",
-  "s_au_unit_days": "dage"
+  "s_au_unit_days": "dage",
+  "s_au_containers": "Containere",
+  "s_au_containers_desc": "Vælg, hvilke containere auto-opdatering må opdatere. Fjern markeringen ved en container for at udelukke den: ShipLog opdaterer den aldrig af sig selv, så du opdaterer den manuelt. Manuelle opdateringer, changelogs og risikomærker påvirkes ikke. Tryk på Anvend for at gemme.",
+  "s_au_ct_caption": "Fjern markeringen ved en container for at udelukke den fra auto-opdatering.",
+  "s_au_ct_off": "Auto-opdatering er slået fra — slå den til ovenfor for at vælge containere.",
+  "s_au_ct_loading": "Indlæser containere…",
+  "s_au_ct_none": "Ingen containere fundet endnu — den første scanning kører måske stadig.",
+  "s_au_ct_gone": "ikke fundet",
+  "d_autoLabel": "Auto-opdater denne container",
+  "d_autoHintOn": "Med i ShipLogs planlagte auto-opdatering.",
+  "d_autoHintOff": "Udelukket — ShipLog opdaterer den aldrig af sig selv. Manuelle opdateringer virker stadig.",
+  "d_autoHintDisabled": "Planlagt auto-opdatering er slået fra i ShipLogs indstillinger.",
+  "d_autoSaving": "Gemmer — genstarter ShipLog…",
+  "d_autoFailed": "Kunne ikke gemme. Genindlæs siden, og prøv igen.",
+  "d_autoOffBadge": "Auto-opdatering fra",
+  "d_autoOffBadgeHint": "Udelukket fra ShipLogs planlagte auto-opdatering — klik for at ændre"
 }

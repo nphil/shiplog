@@ -22,6 +22,14 @@
   const confirmUpdate = PREFS.confirmUpdate !== false; // default on
   const silentUpdate = PREFS.silentUpdate === true;    // default off
 
+  // Scheduled auto-update, set by shiplog.Docker.page from the plugin cfg:
+  //   enabled — the master switch (Settings → Updates). While it is off nothing is auto-updated,
+  //             so no row is flagged and the per-container switch is shown greyed out.
+  //   exclude — the containers the admin opted OUT of auto-update (AUTOUPDATE_EXCLUDE_CONTAINERS).
+  const AUP = (PREFS.autoUpdate && typeof PREFS.autoUpdate === "object") ? PREFS.autoUpdate : {};
+  const auEnabled = AUP.enabled === true;
+  let auExclude = Array.isArray(AUP.exclude) ? AUP.exclude.map(String) : [];
+
   const UPDATE_PHRASES = [
     "aktualisierung anwenden", "auf dem neu", "nicht verfügbar", "wird geprüft",
     "up-to-date", "up to date", "update ready", "apply update", "not available",
@@ -38,6 +46,14 @@
   const WARN_ICON =
     '<svg class="sl-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
     '<path d="M12 2 1 21h22L12 2zm0 6a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V9a1 1 0 0 1 1-1zm0 9.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5z"/></svg>';
+
+  // "Auto-update off": the circular update arrows, struck through.
+  const AUTO_OFF_ICON =
+    '<svg class="sl-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M13.3 7.2A5.4 5.4 0 0 0 4.1 4.1L3 5.2"/><path d="M3 2.6v2.6h2.6"/>' +
+    '<path d="M2.7 8.8a5.4 5.4 0 0 0 9.2 3.1l1.1-1.1"/><path d="M13 13.4v-2.6h-2.6"/>' +
+    '<line x1="2.2" y1="2.2" x2="13.8" y2="13.8"/></svg>';
 
   // risk → css suffix used by both the chip dot and the bubble pill
   const RISK_CLASS = { low: "low", medium: "mid", high: "high", critical: "crit", unknown: "grey" };
@@ -62,6 +78,14 @@
     rateLimited: "GitHub's hourly rate limit was reached, so the release notes couldn't load. Add a GitHub token in ShipLog's settings (Sources) to raise it.",
     recent: "Recent releases",
     pinned: "pinned", localimg: "local image",
+    autoLabel: "Auto-update this container",
+    autoHintOn: "Included in ShipLog's scheduled auto-update.",
+    autoHintOff: "Excluded — ShipLog never updates it by itself. Manual updates still work.",
+    autoHintDisabled: "Scheduled auto-update is off in ShipLog's settings.",
+    autoSaving: "Saving — restarting ShipLog…",
+    autoFailed: "Couldn't save. Reload the page and try again.",
+    autoOffBadge: "Auto-update off",
+    autoOffBadgeHint: "Excluded from ShipLog's scheduled auto-update — click to change",
   };
   const I18N = (window.shiplogI18n && typeof window.shiplogI18n === "object") ? window.shiplogI18n : {};
   function T(k) { return I18N["d_" + k] || EN[k] || k; }
@@ -126,6 +150,85 @@
     return html;
   }
   function norm(s) { return String(s || "").trim().toLowerCase(); }
+
+  // ──────────────────────────────────────────────────────── auto-update opt-out
+  // ShipLog's scheduled auto-update can leave chosen containers alone (Settings → Updates →
+  // Containers). The choice lives in the plugin cfg (AUTOUPDATE_EXCLUDE_CONTAINERS) and is saved
+  // exactly as the settings page saves it: a POST to Unraid's own /update.php, which merges the one
+  // changed key into shiplog.cfg and then runs rc.shiplog restart, so the engine picks it up.
+  const AU_NAME_OK = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/; // Docker's container-name rule; keeps the cfg line safe too
+  function auIsExcluded(name) {
+    const n = norm(name);
+    return !!n && auExclude.some((x) => norm(x) === n);
+  }
+  async function auSave(name, excluded) {
+    const next = auExclude.filter((x) => norm(x) !== norm(name));
+    if (excluded) next.push(name);
+    const body = new URLSearchParams();
+    body.set("#file", "shiplog/shiplog.cfg");
+    body.set("AUTOUPDATE_EXCLUDE_CONTAINERS", next.join(","));
+    body.set("#command", "/usr/local/emhttp/plugins/shiplog/scripts/rc.shiplog");
+    body.set("#arg[1]", "restart");
+    body.set("csrf_token", window.csrf_token || "");
+    try {
+      const res = await fetch("/update.php", { method: "POST", body });
+      const txt = await res.text();
+      // Unraid answers a refused POST (bad CSRF token) with an empty 200; a real run echoes its page.
+      if (!res.ok || txt.indexOf("addLog") < 0) return false;
+      auExclude = next;
+      return true;
+    } catch (e) { return false; }
+  }
+  // The strip under the bubble header: switch + one line saying what the current state means.
+  function autoHTML(st) {
+    const name = st.container && st.container.name;
+    if (!AU_NAME_OK.test(name || "")) return ""; // a name the cfg can't hold safely gets no switch
+    const excluded = auIsExcluded(name);
+    const hint = !auEnabled ? "autoHintDisabled" : (excluded ? "autoHintOff" : "autoHintOn");
+    return `<div class="sl-aubar" data-au="${excluded ? "off" : "on"}">
+        <label class="sl-au-row${auEnabled ? "" : " sl-au-dis"}">
+          <input type="checkbox" class="sl-au-cb"${excluded ? "" : " checked"}${auEnabled ? "" : " disabled"}>
+          <span class="sl-au-track"></span><span>${esc(T("autoLabel"))}</span>
+        </label>
+        <span class="sl-au-hint">${esc(T(hint))}</span>
+      </div>`;
+  }
+  function wireAuto(b, st) {
+    const cb = b.querySelector(".sl-au-cb");
+    if (!cb) return;
+    cb.addEventListener("change", () => {
+      const bar = b.querySelector(".sl-aubar"), hint = bar.querySelector(".sl-au-hint");
+      const excluded = !cb.checked;
+      cb.disabled = true; bar.dataset.au = "saving"; hint.textContent = T("autoSaving");
+      auSave(st.container.name, excluded).then((ok) => {
+        cb.disabled = false;
+        if (!ok) { cb.checked = !cb.checked; bar.dataset.au = "error"; hint.textContent = T("autoFailed"); return; }
+        bar.dataset.au = excluded ? "off" : "on";
+        hint.textContent = T(excluded ? "autoHintOff" : "autoHintOn");
+        refreshAutoBadges();
+      });
+    });
+  }
+  // The row indicator: a quiet pill after the Changelog chip, only for an excluded container (and only
+  // while auto-update itself is on). Clicking it opens the changelog window, whose switch changes it.
+  function autoBadge(st) {
+    const a = el("a", "sl-autoff", `${AUTO_OFF_ICON}<span>${esc(T("autoOffBadge"))}</span>`);
+    a.href = "#";
+    a.title = `ShipLog: ${T("autoOffBadgeHint")}`;
+    a.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openFor(a, st); });
+    return a;
+  }
+  function refreshAutoBadges() { // after a switch: bring every tagged row in line with auExclude
+    for (const tr of findRows()) {
+      const row = tr.querySelector(".sl-chiprow");
+      const st = row && byName[norm(rowName(tr))];
+      if (!st) continue;
+      const want = auEnabled && auIsExcluded(st.container && st.container.name);
+      const have = row.querySelector(":scope > .sl-autoff");
+      if (want && !have) row.appendChild(autoBadge(st));
+      else if (!want && have) have.remove();
+    }
+  }
 
   function hasUpdate(st) {
     const k = st && st.kind;
@@ -396,7 +499,7 @@
       </div>
       ${st.unmaintained ? `<div class="sl-unmaint-note"><h4>⚠ ${esc(T("unmaintained"))}</h4>${esc(st.unmaintained_reason || T("unmaintained"))}. ${esc(T("unmaintainedHint"))}</div>` : ""}
       ${!st.unmaintained && st.ca_deprecated ? `<div class="sl-unmaint-note sl-dep-note"><h4>⚠ ${esc(T("deprecated"))}</h4>${esc(st.ca_deprecated_note || T("deprecated"))}</div>` : ""}
-      ${summary}${raw}
+      ${autoHTML(st)}${summary}${raw}
       ${src ? `<div class="sl-bf"><span>${src}</span></div>` : ""}`;
   }
 
@@ -663,6 +766,7 @@
       if (ok) close();
       else { updBtn.textContent = T("updateGone"); updBtn.classList.add("sl-upd-off"); }
     });
+    wireAuto(b, st);
     // persist size whenever the user drags the resize handle
     try {
       const ro = new ResizeObserver(() => {
@@ -773,6 +877,7 @@
       chip.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openFor(chip, st); });
       const row = el("div", "sl-chiprow");
       row.appendChild(chip);
+      if (auEnabled && auIsExcluded(st.container && st.container.name)) row.appendChild(autoBadge(st));
       cell.appendChild(row);
       cell.setAttribute(MARK, "1");
       n++;

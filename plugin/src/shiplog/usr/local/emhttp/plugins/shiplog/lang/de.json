@@ -105,5 +105,20 @@
   "s_au_dryrun": "Trockenlauf",
   "s_au_dryrun_desc": "Nichts anwenden — nur eine Benachrichtigung senden, was aktualisiert WÜRDE. Erst so den Plan ansehen, bevor du echte Updates scharf schaltest.",
   "s_au_unit_hours": "Stunden",
-  "s_au_unit_days": "Tage"
+  "s_au_unit_days": "Tage",
+  "s_au_containers": "Container",
+  "s_au_containers_desc": "Lege fest, welche Container das Auto-Update aktualisieren darf. Entferne das Häkchen bei einem Container, um ihn auszuschließen: ShipLog aktualisiert ihn nie von selbst, du aktualisierst ihn manuell. Manuelle Updates, Changelogs und Risiko-Badges bleiben unberührt. Zum Speichern auf Übernehmen klicken.",
+  "s_au_ct_caption": "Häkchen entfernen, um einen Container vom Auto-Update auszuschließen.",
+  "s_au_ct_off": "Auto-Update ist aus — oben einschalten, um Container auszuwählen.",
+  "s_au_ct_loading": "Container werden geladen…",
+  "s_au_ct_none": "Noch keine Container gefunden — der erste Scan läuft möglicherweise noch.",
+  "s_au_ct_gone": "nicht gefunden",
+  "d_autoLabel": "Diesen Container automatisch aktualisieren",
+  "d_autoHintOn": "Im geplanten Auto-Update von ShipLog enthalten.",
+  "d_autoHintOff": "Ausgeschlossen — ShipLog aktualisiert ihn nie von selbst. Manuelle Updates funktionieren weiterhin.",
+  "d_autoHintDisabled": "Das geplante Auto-Update ist in den ShipLog-Einstellungen ausgeschaltet.",
+  "d_autoSaving": "Speichern — ShipLog wird neu gestartet…",
+  "d_autoFailed": "Speichern fehlgeschlagen. Seite neu laden und erneut versuchen.",
+  "d_autoOffBadge": "Auto-Update aus",
+  "d_autoOffBadgeHint": "Vom geplanten Auto-Update von ShipLog ausgeschlossen — zum Ändern klicken"
 }

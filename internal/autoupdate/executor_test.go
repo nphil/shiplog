@@ -149,3 +149,146 @@ func TestExecutorNoExcludeWordsConfiguredUpdatesNormally(t *testing.T) {
 		t.Fatal("must not be marked Blocked when no exclude words are configured")
 	}
 }
+
+func TestExecutorExcludedContainerNeverUpdated(t *testing.T) {
+	upd := &fakeUpdater{sup: true}
+	e := NewExecutor(fakeLister{sts: []model.UpdateStatus{
+		stNamed("Cody", model.KindMinor),
+		stNamed("plex", model.KindMinor),
+	}}, upd)
+	res := e.Run(context.Background(), Policy{Level: LevelMajor, ExcludeContainers: []string{"Cody"}}, false)
+	if !reflect.DeepEqual(upd.calls, []string{"plex"}) {
+		t.Fatalf("Updater.Update calls = %v, want only [plex] — an excluded container must never be applied", upd.calls)
+	}
+	if len(res.Outcomes) != 2 {
+		t.Fatalf("want 2 outcomes (one skipped, one updated), got %+v", res.Outcomes)
+	}
+	cody, plex := res.Outcomes[0], res.Outcomes[1]
+	if !cody.Skipped || cody.Updated || cody.Blocked || cody.Err != nil {
+		t.Fatalf("Cody = %+v, want Skipped only (not Updated, not Blocked, no Err)", cody)
+	}
+	if plex.Skipped || !plex.Updated || plex.Err != nil {
+		t.Fatalf("plex = %+v, want a plain Updated outcome", plex)
+	}
+}
+
+func TestExecutorExcludedMatchIsCaseInsensitive(t *testing.T) {
+	for _, configured := range []string{"cody", "CODY", "Cody"} {
+		upd := &fakeUpdater{sup: true}
+		e := NewExecutor(fakeLister{sts: []model.UpdateStatus{stNamed("Cody", model.KindPatch)}}, upd)
+		res := e.Run(context.Background(), Policy{Level: LevelPatch, ExcludeContainers: []string{configured}}, false)
+		if len(upd.calls) != 0 {
+			t.Errorf("configured %q: Update called for %v, want none", configured, upd.calls)
+		}
+		if len(res.Outcomes) != 1 || !res.Outcomes[0].Skipped {
+			t.Errorf("configured %q: outcomes = %+v, want one Skipped", configured, res.Outcomes)
+		}
+	}
+}
+
+func TestExecutorExcludedContainerSkippedInDryRunToo(t *testing.T) {
+	// An admin checking a dry run must see the exclusion working ("skipped"),
+	// not "would update", before they trust it live.
+	upd := &fakeUpdater{sup: true}
+	e := NewExecutor(fakeLister{sts: []model.UpdateStatus{
+		stNamed("Cody", model.KindMinor), stNamed("plex", model.KindMinor),
+	}}, upd)
+	res := e.Run(context.Background(), Policy{Level: LevelMinor, ExcludeContainers: []string{"Cody"}}, true)
+	if len(upd.calls) != 0 {
+		t.Fatalf("dry-run must never call Update, got %v", upd.calls)
+	}
+	if !res.DryRun || len(res.Outcomes) != 2 {
+		t.Fatalf("dry-run result = %+v", res)
+	}
+	if !res.Outcomes[0].Skipped || res.Outcomes[0].Updated {
+		t.Fatalf("Cody dry-run outcome = %+v, want Skipped and not 'would update'", res.Outcomes[0])
+	}
+	if res.Outcomes[1].Skipped || !res.Outcomes[1].Updated {
+		t.Fatalf("plex dry-run outcome = %+v, want 'would update'", res.Outcomes[1])
+	}
+}
+
+func TestExecutorNonExcludedContainersUnaffected(t *testing.T) {
+	// A list that names only other containers changes nothing for everyone else.
+	upd := &fakeUpdater{sup: true}
+	e := NewExecutor(fakeLister{sts: []model.UpdateStatus{
+		stNamed("a", model.KindPatch), stNamed("b", model.KindPatch),
+	}}, upd)
+	res := e.Run(context.Background(), Policy{Level: LevelPatch, ExcludeContainers: []string{"Cody", "plex"}}, false)
+	if !reflect.DeepEqual(upd.calls, []string{"a", "b"}) {
+		t.Fatalf("updated %v, want [a b]", upd.calls)
+	}
+	for _, o := range res.Outcomes {
+		if o.Skipped || !o.Updated {
+			t.Fatalf("outcome %+v, want a plain Updated", o)
+		}
+	}
+}
+
+func TestExecutorEmptyExcludeContainersChangesNothing(t *testing.T) {
+	for _, list := range [][]string{nil, {}} {
+		upd := &fakeUpdater{sup: true}
+		e := NewExecutor(fakeLister{sts: []model.UpdateStatus{
+			stNamed("Cody", model.KindMinor), stNamed("plex", model.KindMajor), stNamed("old", model.KindUnknown),
+		}}, upd)
+		res := e.Run(context.Background(), Policy{Level: LevelMajor, ExcludeContainers: list}, false)
+		if !reflect.DeepEqual(upd.calls, []string{"Cody", "plex"}) {
+			t.Fatalf("list=%v: updated %v, want [Cody plex] (the pre-existing behaviour)", list, upd.calls)
+		}
+		if len(res.Outcomes) != 2 || res.Outcomes[0].Skipped || res.Outcomes[1].Skipped {
+			t.Fatalf("list=%v: outcomes %+v, want 2 updated, none skipped", list, res.Outcomes)
+		}
+	}
+}
+
+func TestExecutorExcludedContainerWithoutEligibleUpdateReportsNothing(t *testing.T) {
+	// "Skipped" means "an update was due and we held it back". An excluded
+	// container that is up to date, or whose bump is above the level, is simply
+	// not eligible — no outcome, so no noise in the run log.
+	upd := &fakeUpdater{sup: true}
+	e := NewExecutor(fakeLister{sts: []model.UpdateStatus{
+		stNamed("Cody", model.KindNone), stNamed("plex", model.KindMajor),
+	}}, upd)
+	res := e.Run(context.Background(), Policy{Level: LevelMinor, ExcludeContainers: []string{"Cody", "plex"}}, false)
+	if len(upd.calls) != 0 || len(res.Outcomes) != 0 {
+		t.Fatalf("calls=%v outcomes=%+v, want neither", upd.calls, res.Outcomes)
+	}
+}
+
+func TestExecutorExcludedContainerIsSkippedNotBlocked(t *testing.T) {
+	// When both guards apply, the admin's explicit container choice is the
+	// reported reason — not the changelog word.
+	upd := &fakeUpdater{sup: true}
+	e := NewExecutor(fakeLister{sts: []model.UpdateStatus{
+		stWithChangelog("Cody", model.KindPatch, "BREAKING: config format changed"),
+	}}, upd)
+	res := e.Run(context.Background(), Policy{
+		Level: LevelPatch, ExcludeWords: []string{"breaking"}, ExcludeContainers: []string{"Cody"},
+	}, false)
+	if len(upd.calls) != 0 {
+		t.Fatalf("Update called for %v, want none", upd.calls)
+	}
+	if len(res.Outcomes) != 1 || !res.Outcomes[0].Skipped || res.Outcomes[0].Blocked {
+		t.Fatalf("outcomes = %+v, want Skipped and not Blocked", res.Outcomes)
+	}
+}
+
+func TestResultNotable(t *testing.T) {
+	cases := []struct {
+		name string
+		res  Result
+		want bool
+	}{
+		{"empty run", Result{}, false},
+		{"only skipped", Result{Outcomes: []Outcome{{Name: "Cody", Skipped: true}}}, false},
+		{"skipped + updated", Result{Outcomes: []Outcome{{Name: "Cody", Skipped: true}, {Name: "plex", Updated: true}}}, true},
+		{"skipped + blocked", Result{Outcomes: []Outcome{{Name: "Cody", Skipped: true}, {Name: "a", Blocked: true}}}, true},
+		{"skipped + failed", Result{Outcomes: []Outcome{{Name: "Cody", Skipped: true}, {Name: "a", Err: errors.New("boom")}}}, true},
+		{"only updated", Result{Outcomes: []Outcome{{Name: "plex", Updated: true}}}, true},
+	}
+	for _, c := range cases {
+		if got := c.res.Notable(); got != c.want {
+			t.Errorf("%s: Notable = %v, want %v", c.name, got, c.want)
+		}
+	}
+}

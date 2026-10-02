@@ -94,3 +94,55 @@ func TestParseLevel(t *testing.T) {
 		}
 	}
 }
+
+func TestParseExcludeContainers(t *testing.T) {
+	cases := []struct {
+		in   string
+		want []string
+	}{
+		{"", nil},
+		{"   ", nil},
+		{"Cody", []string{"Cody"}},
+		{"Cody,plex", []string{"Cody", "plex"}},
+		{" Cody ,, plex , ", []string{"Cody", "plex"}},
+		{"Cody,cody,CODY,plex", []string{"Cody", "plex"}}, // repeats ignoring case collapse; first spelling wins
+	}
+	for _, c := range cases {
+		got := ParseExcludeContainers(c.in)
+		if len(got) != len(c.want) {
+			t.Errorf("ParseExcludeContainers(%q) = %v, want %v", c.in, got, c.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Errorf("ParseExcludeContainers(%q) = %v, want %v", c.in, got, c.want)
+				break
+			}
+		}
+	}
+}
+
+func TestContainerExcluded(t *testing.T) {
+	list := []string{"Cody", "plex"}
+	cases := []struct {
+		name string
+		list []string
+		want bool
+	}{
+		{"Cody", list, true},
+		{"cody", list, true}, // case-insensitive both ways
+		{"CODY", list, true},
+		{"PLEX", list, true},
+		{"sonarr", list, false},
+		{"Cody2", list, false}, // whole-name match, never a prefix or substring
+		{"Cod", list, false},
+		{"", list, false},
+		{"Cody", nil, false}, // empty list excludes nothing
+		{"Cody", []string{}, false},
+	}
+	for _, c := range cases {
+		if got := ContainerExcluded(c.name, c.list); got != c.want {
+			t.Errorf("ContainerExcluded(%q, %v) = %v, want %v", c.name, c.list, got, c.want)
+		}
+	}
+}

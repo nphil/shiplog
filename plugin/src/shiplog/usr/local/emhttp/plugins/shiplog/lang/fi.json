@@ -105,5 +105,20 @@
   "s_au_dryrun": "Testiajo",
   "s_au_dryrun_desc": "Älä asenna mitään, lähetä vain ilmoitus siitä, mitä PÄIVITETTÄISIIN. Käytä tätä ensin nähdäksesi suunnitelman ennen todellisten päivitysten käyttöönottoa.",
   "s_au_unit_hours": "tuntia",
-  "s_au_unit_days": "päivää"
+  "s_au_unit_days": "päivää",
+  "s_au_containers": "Kontit",
+  "s_au_containers_desc": "Valitse, mitä kontteja automaattipäivitys saa päivittää. Poista kontin valinta jättääksesi sen pois: ShipLog ei koskaan päivitä sitä itse, joten päivität sen käsin. Manuaaliset päivitykset, muutosloki ja riskimerkit eivät muutu. Tallenna painamalla Käytä.",
+  "s_au_ct_caption": "Poista kontin valinta jättääksesi sen automaattipäivityksen ulkopuolelle.",
+  "s_au_ct_off": "Automaattipäivitys on pois päältä — ota se käyttöön yllä valitaksesi kontit.",
+  "s_au_ct_loading": "Ladataan kontteja…",
+  "s_au_ct_none": "Kontteja ei ole vielä löytynyt — ensimmäinen tarkistus saattaa vielä olla käynnissä.",
+  "s_au_ct_gone": "ei löytynyt",
+  "d_autoLabel": "Päivitä tämä kontti automaattisesti",
+  "d_autoHintOn": "Mukana ShipLogin ajastetussa automaattipäivityksessä.",
+  "d_autoHintOff": "Pois päivityksestä — ShipLog ei koskaan päivitä sitä itse. Manuaaliset päivitykset toimivat edelleen.",
+  "d_autoHintDisabled": "Ajastettu automaattipäivitys on pois päältä ShipLogin asetuksissa.",
+  "d_autoSaving": "Tallennetaan — ShipLog käynnistyy uudelleen…",
+  "d_autoFailed": "Tallennus epäonnistui. Lataa sivu uudelleen ja yritä uudestaan.",
+  "d_autoOffBadge": "Automaattipäivitys pois",
+  "d_autoOffBadgeHint": "Pois ShipLogin ajastetusta automaattipäivityksestä — napsauta muuttaaksesi"
 }

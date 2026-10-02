@@ -105,5 +105,20 @@
   "s_au_dryrun": "Dry run",
   "s_au_dryrun_desc": "Don't apply anything — just send a notification of what WOULD be updated. Use this first to see the plan before arming real updates.",
   "s_au_unit_hours": "hours",
-  "s_au_unit_days": "days"
+  "s_au_unit_days": "days",
+  "s_au_containers": "Containers",
+  "s_au_containers_desc": "Choose which containers auto-update may update. Untick a container to exclude it: ShipLog will never update it by itself, so you update it manually. Manual updates, changelogs and risk badges are not affected. Press Apply to save.",
+  "s_au_ct_caption": "Untick a container to exclude it from auto-update.",
+  "s_au_ct_off": "Auto-update is off — turn it on above to choose containers.",
+  "s_au_ct_loading": "Loading containers…",
+  "s_au_ct_none": "No containers found yet — the first scan may still be running.",
+  "s_au_ct_gone": "not found",
+  "d_autoLabel": "Auto-update this container",
+  "d_autoHintOn": "Included in ShipLog's scheduled auto-update.",
+  "d_autoHintOff": "Excluded — ShipLog never updates it by itself. Manual updates still work.",
+  "d_autoHintDisabled": "Scheduled auto-update is off in ShipLog's settings.",
+  "d_autoSaving": "Saving — restarting ShipLog…",
+  "d_autoFailed": "Couldn't save. Reload the page and try again.",
+  "d_autoOffBadge": "Auto-update off",
+  "d_autoOffBadgeHint": "Excluded from ShipLog's scheduled auto-update — click to change"
 }

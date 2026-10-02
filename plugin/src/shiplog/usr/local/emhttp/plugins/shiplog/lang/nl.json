@@ -105,5 +105,20 @@
   "s_au_dryrun": "Proefdraai",
   "s_au_dryrun_desc": "Past niets toe, stuurt alleen een melding van wat er bijgewerkt ZOU worden. Gebruik dit eerst om het plan te zien voordat je echte updates activeert.",
   "s_au_unit_hours": "uur",
-  "s_au_unit_days": "dagen"
+  "s_au_unit_days": "dagen",
+  "s_au_containers": "Containers",
+  "s_au_containers_desc": "Kies welke containers het automatisch bijwerken mag bijwerken. Haal het vinkje bij een container weg om hem uit te sluiten: ShipLog werkt hem nooit zelf bij, dus je werkt hem handmatig bij. Handmatige updates, changelogs en risicobadges blijven ongemoeid. Klik op Toepassen om op te slaan.",
+  "s_au_ct_caption": "Haal het vinkje bij een container weg om hem uit te sluiten van automatisch bijwerken.",
+  "s_au_ct_off": "Automatisch bijwerken staat uit — zet het hierboven aan om containers te kiezen.",
+  "s_au_ct_loading": "Containers laden…",
+  "s_au_ct_none": "Nog geen containers gevonden — de eerste scan loopt mogelijk nog.",
+  "s_au_ct_gone": "niet gevonden",
+  "d_autoLabel": "Deze container automatisch bijwerken",
+  "d_autoHintOn": "Opgenomen in het geplande automatisch bijwerken van ShipLog.",
+  "d_autoHintOff": "Uitgesloten — ShipLog werkt hem nooit zelf bij. Handmatige updates werken gewoon.",
+  "d_autoHintDisabled": "Gepland automatisch bijwerken staat uit in de instellingen van ShipLog.",
+  "d_autoSaving": "Opslaan — ShipLog wordt herstart…",
+  "d_autoFailed": "Opslaan mislukt. Laad de pagina opnieuw en probeer het nog eens.",
+  "d_autoOffBadge": "Automatisch bijwerken uit",
+  "d_autoOffBadgeHint": "Uitgesloten van het geplande automatisch bijwerken van ShipLog — klik om te wijzigen"
 }

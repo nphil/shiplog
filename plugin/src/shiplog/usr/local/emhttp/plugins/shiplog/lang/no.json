@@ -105,5 +105,20 @@
   "s_au_dryrun": "Tørrkjøring",
   "s_au_dryrun_desc": "Ikke bruk noe, bare send et varsel om hva som VILLE blitt oppdatert. Bruk dette først for å se planen før du aktiverer ekte oppdateringer.",
   "s_au_unit_hours": "timer",
-  "s_au_unit_days": "dager"
+  "s_au_unit_days": "dager",
+  "s_au_containers": "Containere",
+  "s_au_containers_desc": "Velg hvilke containere auto-oppdatering har lov til å oppdatere. Fjern haken ved en container for å utelukke den: ShipLog oppdaterer den aldri av seg selv, så du oppdaterer den manuelt. Manuelle oppdateringer, endringslogger og risikomerker påvirkes ikke. Trykk på Bruk for å lagre.",
+  "s_au_ct_caption": "Fjern haken ved en container for å utelukke den fra auto-oppdatering.",
+  "s_au_ct_off": "Auto-oppdatering er av — slå den på ovenfor for å velge containere.",
+  "s_au_ct_loading": "Laster inn containere…",
+  "s_au_ct_none": "Ingen containere funnet ennå — den første skanningen kan fortsatt pågå.",
+  "s_au_ct_gone": "ikke funnet",
+  "d_autoLabel": "Auto-oppdater denne containeren",
+  "d_autoHintOn": "Med i ShipLogs planlagte auto-oppdatering.",
+  "d_autoHintOff": "Utelukket — ShipLog oppdaterer den aldri av seg selv. Manuelle oppdateringer fungerer fortsatt.",
+  "d_autoHintDisabled": "Planlagt auto-oppdatering er slått av i ShipLogs innstillinger.",
+  "d_autoSaving": "Lagrer — starter ShipLog på nytt…",
+  "d_autoFailed": "Kunne ikke lagre. Last inn siden på nytt og prøv igjen.",
+  "d_autoOffBadge": "Auto-oppdatering av",
+  "d_autoOffBadgeHint": "Utelukket fra ShipLogs planlagte auto-oppdatering — klikk for å endre"
 }

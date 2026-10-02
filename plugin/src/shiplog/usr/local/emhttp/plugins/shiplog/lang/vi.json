@@ -105,5 +105,20 @@
   "s_au_dryrun": "Chạy thử",
   "s_au_dryrun_desc": "Không áp dụng gì cả, chỉ gửi thông báo về những gì SẼ được cập nhật. Hãy dùng tùy chọn này trước để xem kế hoạch trước khi kích hoạt cập nhật thật.",
   "s_au_unit_hours": "giờ",
-  "s_au_unit_days": "ngày"
+  "s_au_unit_days": "ngày",
+  "s_au_containers": "Vùng chứa",
+  "s_au_containers_desc": "Chọn những vùng chứa mà tính năng tự động cập nhật được phép cập nhật. Bỏ chọn một vùng chứa để loại trừ nó: ShipLog sẽ không bao giờ tự cập nhật vùng chứa đó, nên bạn cập nhật thủ công. Cập nhật thủ công, nhật ký thay đổi và huy hiệu rủi ro không bị ảnh hưởng. Nhấn Áp dụng để lưu.",
+  "s_au_ct_caption": "Bỏ chọn một vùng chứa để loại trừ nó khỏi tự động cập nhật.",
+  "s_au_ct_off": "Tự động cập nhật đang tắt — hãy bật ở trên để chọn vùng chứa.",
+  "s_au_ct_loading": "Đang tải vùng chứa…",
+  "s_au_ct_none": "Chưa tìm thấy vùng chứa nào — lần quét đầu tiên có thể vẫn đang chạy.",
+  "s_au_ct_gone": "không tìm thấy",
+  "d_autoLabel": "Tự động cập nhật vùng chứa này",
+  "d_autoHintOn": "Nằm trong lịch tự động cập nhật của ShipLog.",
+  "d_autoHintOff": "Bị loại trừ — ShipLog không bao giờ tự cập nhật nó. Cập nhật thủ công vẫn hoạt động.",
+  "d_autoHintDisabled": "Tự động cập nhật theo lịch đang tắt trong cài đặt của ShipLog.",
+  "d_autoSaving": "Đang lưu — đang khởi động lại ShipLog…",
+  "d_autoFailed": "Không lưu được. Hãy tải lại trang rồi thử lại.",
+  "d_autoOffBadge": "Tự động cập nhật: tắt",
+  "d_autoOffBadgeHint": "Bị loại trừ khỏi tự động cập nhật theo lịch của ShipLog — nhấp để thay đổi"
 }

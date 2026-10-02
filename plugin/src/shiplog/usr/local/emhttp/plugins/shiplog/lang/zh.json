@@ -105,5 +105,20 @@
   "s_au_dryrun": "试运行",
   "s_au_dryrun_desc": "不应用任何更新，只发送一条通知，告知哪些内容将会被更新。在正式启用真正的更新之前，先用它查看计划。",
   "s_au_unit_hours": "小时",
-  "s_au_unit_days": "天"
+  "s_au_unit_days": "天",
+  "s_au_containers": "容器",
+  "s_au_containers_desc": "选择自动更新可以更新哪些容器。取消勾选某个容器即可将其排除：ShipLog 永远不会自行更新它，需要由你手动更新。手动更新、变更日志和风险徽章不受影响。点击“应用”即可保存。",
+  "s_au_ct_caption": "取消勾选某个容器，即可将其排除在自动更新之外。",
+  "s_au_ct_off": "自动更新已关闭 — 请先在上方开启，再选择容器。",
+  "s_au_ct_loading": "正在加载容器…",
+  "s_au_ct_none": "尚未找到容器 — 首次扫描可能仍在进行。",
+  "s_au_ct_gone": "未找到",
+  "d_autoLabel": "自动更新此容器",
+  "d_autoHintOn": "已纳入 ShipLog 的定时自动更新。",
+  "d_autoHintOff": "已排除 — ShipLog 永远不会自行更新它。手动更新仍然可用。",
+  "d_autoHintDisabled": "定时自动更新在 ShipLog 设置中已关闭。",
+  "d_autoSaving": "正在保存 — 正在重启 ShipLog…",
+  "d_autoFailed": "保存失败。请刷新页面后重试。",
+  "d_autoOffBadge": "自动更新已关闭",
+  "d_autoOffBadgeHint": "已排除在 ShipLog 的定时自动更新之外 — 点击可更改"
 }

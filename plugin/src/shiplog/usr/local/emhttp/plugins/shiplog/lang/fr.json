@@ -105,5 +105,20 @@
   "s_au_dryrun": "Simulation",
   "s_au_dryrun_desc": "N'applique rien, envoie seulement une notification de ce qui SERAIT mis à jour. Utilisez cette option d'abord pour voir le plan avant d'activer les vraies mises à jour.",
   "s_au_unit_hours": "heures",
-  "s_au_unit_days": "jours"
+  "s_au_unit_days": "jours",
+  "s_au_containers": "Conteneurs",
+  "s_au_containers_desc": "Choisis les conteneurs que la mise à jour automatique peut mettre à jour. Décoche un conteneur pour l'exclure : ShipLog ne le mettra jamais à jour de lui-même, tu le mets donc à jour à la main. Les mises à jour manuelles, les journaux de modifications et les badges de risque ne sont pas touchés. Clique sur Appliquer pour enregistrer.",
+  "s_au_ct_caption": "Décoche un conteneur pour l'exclure de la mise à jour automatique.",
+  "s_au_ct_off": "La mise à jour automatique est désactivée — active-la ci-dessus pour choisir les conteneurs.",
+  "s_au_ct_loading": "Chargement des conteneurs…",
+  "s_au_ct_none": "Aucun conteneur trouvé pour l'instant — la première analyse est peut-être encore en cours.",
+  "s_au_ct_gone": "introuvable",
+  "d_autoLabel": "Mettre à jour ce conteneur automatiquement",
+  "d_autoHintOn": "Inclus dans la mise à jour automatique planifiée de ShipLog.",
+  "d_autoHintOff": "Exclu — ShipLog ne le met jamais à jour de lui-même. Les mises à jour manuelles fonctionnent toujours.",
+  "d_autoHintDisabled": "La mise à jour automatique planifiée est désactivée dans les réglages de ShipLog.",
+  "d_autoSaving": "Enregistrement — redémarrage de ShipLog…",
+  "d_autoFailed": "Échec de l'enregistrement. Recharge la page et réessaie.",
+  "d_autoOffBadge": "Mise à jour auto désactivée",
+  "d_autoOffBadgeHint": "Exclu de la mise à jour automatique planifiée de ShipLog — clique pour modifier"
 }

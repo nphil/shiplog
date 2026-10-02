@@ -105,5 +105,20 @@
   "s_au_dryrun": "Zkušební běh",
   "s_au_dryrun_desc": "Nic nepoužije, jen odešle oznámení o tom, co by se aktualizovalo. Nejprve použijte toto, abyste viděli plán, než zapnete skutečné aktualizace.",
   "s_au_unit_hours": "hodin",
-  "s_au_unit_days": "dní"
+  "s_au_unit_days": "dní",
+  "s_au_containers": "Kontejnery",
+  "s_au_containers_desc": "Vyberte, které kontejnery smí automatická aktualizace aktualizovat. Zrušte zaškrtnutí kontejneru, abyste ho vyloučili: ShipLog ho nikdy sám neaktualizuje, takže ho aktualizujete ručně. Ruční aktualizace, changelogy a rizikové štítky tím nejsou dotčeny. Uložíte tlačítkem Použít.",
+  "s_au_ct_caption": "Zrušte zaškrtnutí kontejneru, abyste ho vyloučili z automatické aktualizace.",
+  "s_au_ct_off": "Automatická aktualizace je vypnutá — zapněte ji výše a vyberte kontejnery.",
+  "s_au_ct_loading": "Načítání kontejnerů…",
+  "s_au_ct_none": "Zatím nebyly nalezeny žádné kontejnery — první kontrola možná ještě běží.",
+  "s_au_ct_gone": "nenalezen",
+  "d_autoLabel": "Automaticky aktualizovat tento kontejner",
+  "d_autoHintOn": "Zahrnut do plánované automatické aktualizace ShipLogu.",
+  "d_autoHintOff": "Vyloučen — ShipLog ho nikdy sám neaktualizuje. Ruční aktualizace fungují dál.",
+  "d_autoHintDisabled": "Plánovaná automatická aktualizace je vypnutá v nastavení ShipLogu.",
+  "d_autoSaving": "Ukládání — ShipLog se restartuje…",
+  "d_autoFailed": "Uložení se nezdařilo. Načtěte stránku znovu a zkuste to ještě jednou.",
+  "d_autoOffBadge": "Automatická aktualizace vypnuta",
+  "d_autoOffBadgeHint": "Vyloučen z plánované automatické aktualizace ShipLogu — kliknutím změníte"
 }

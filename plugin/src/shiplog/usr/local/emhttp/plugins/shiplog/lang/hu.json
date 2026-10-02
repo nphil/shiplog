@@ -105,5 +105,20 @@
   "s_au_dryrun": "Próbafutás",
   "s_au_dryrun_desc": "Ne alkalmazzon semmit, csak küldjön értesítést arról, MI frissülne. Előbb ezt használd, hogy lásd a tervet, mielőtt élesíted a valódi frissítéseket.",
   "s_au_unit_hours": "óra",
-  "s_au_unit_days": "nap"
+  "s_au_unit_days": "nap",
+  "s_au_containers": "Konténerek",
+  "s_au_containers_desc": "Válaszd ki, mely konténereket frissítheti az automatikus frissítés. Szüntesd meg egy konténer jelölését a kizárásához: a ShipLog sosem frissíti magától, így te frissíted kézzel. A kézi frissítések, a changelogok és a kockázati jelvények nem változnak. A mentéshez nyomd meg az Alkalmaz gombot.",
+  "s_au_ct_caption": "Szüntesd meg egy konténer jelölését, hogy kizárd az automatikus frissítésből.",
+  "s_au_ct_off": "Az automatikus frissítés ki van kapcsolva — kapcsold be fent a konténerek kiválasztásához.",
+  "s_au_ct_loading": "Konténerek betöltése…",
+  "s_au_ct_none": "Még nem található konténer — lehet, hogy az első vizsgálat még fut.",
+  "s_au_ct_gone": "nem található",
+  "d_autoLabel": "Ennek a konténernek az automatikus frissítése",
+  "d_autoHintOn": "Benne van a ShipLog ütemezett automatikus frissítésében.",
+  "d_autoHintOff": "Kizárva — a ShipLog sosem frissíti magától. A kézi frissítések továbbra is működnek.",
+  "d_autoHintDisabled": "Az ütemezett automatikus frissítés ki van kapcsolva a ShipLog beállításaiban.",
+  "d_autoSaving": "Mentés — a ShipLog újraindul…",
+  "d_autoFailed": "A mentés nem sikerült. Töltsd újra az oldalt, és próbáld újra.",
+  "d_autoOffBadge": "Automatikus frissítés kikapcsolva",
+  "d_autoOffBadgeHint": "Kizárva a ShipLog ütemezett automatikus frissítéséből — kattints a módosításhoz"
 }

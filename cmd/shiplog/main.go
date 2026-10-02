@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -148,9 +149,14 @@ func main() {
 func runAutoUpdate(ctx context.Context, cfg config.AutoUpdateConfig, exec *autoupdate.Executor, st *store.Store, notifier *notify.Fanout) {
 	sched := autoupdate.Schedule{Mode: cfg.SchedMode, Time: cfg.SchedTime, Every: cfg.SchedEvery}
 	policy := autoupdate.Policy{
-		Level:        autoupdate.ParseLevel(cfg.Level),
-		Digest:       cfg.Digest,
-		ExcludeWords: autoupdate.ParseExcludeWords(cfg.ExcludeWords),
+		Level:             autoupdate.ParseLevel(cfg.Level),
+		Digest:            cfg.Digest,
+		ExcludeWords:      autoupdate.ParseExcludeWords(cfg.ExcludeWords),
+		ExcludeContainers: autoupdate.ParseExcludeContainers(cfg.ExcludeContainers),
+	}
+	if len(policy.ExcludeContainers) > 0 {
+		log.Printf("shiplog: auto-update will never touch: %s (excluded in settings; update them manually)",
+			strings.Join(policy.ExcludeContainers, ", "))
 	}
 	tick := time.NewTicker(time.Minute)
 	defer tick.Stop()
@@ -180,7 +186,7 @@ func runAutoUpdate(ctx context.Context, cfg config.AutoUpdateConfig, exec *autou
 		res := exec.Run(ctx, policy, cfg.DryRun)
 		if !res.DryRun {
 			for _, o := range res.Outcomes {
-				if o.Blocked {
+				if o.Blocked || o.Skipped {
 					continue // never applied — not an action, so not part of the audit log
 				}
 				errStr := ""
@@ -195,10 +201,11 @@ func runAutoUpdate(ctx context.Context, cfg config.AutoUpdateConfig, exec *autou
 		}
 		// Always log the itemised run summary so the plan is visible even without
 		// Matrix (matters for dry-run — the whole point is to SEE what would update);
-		// then also push it to Matrix when configured. Empty when nothing was eligible.
+		// then also push it to Matrix when configured. Empty when nothing was eligible;
+		// a run that only skipped containers the admin excluded is logged, not pushed.
 		if text, html := autoupdate.RenderSummary(res); text != "" {
 			log.Printf("shiplog: %s", text)
-			if notifier != nil {
+			if notifier != nil && res.Notable() {
 				if nerr := notifier.SendMessage(ctx, text, html); nerr != nil {
 					log.Printf("shiplog: auto-update notify: %v", nerr)
 				}

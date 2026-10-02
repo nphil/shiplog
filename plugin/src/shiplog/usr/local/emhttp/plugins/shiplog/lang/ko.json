@@ -105,5 +105,20 @@
   "s_au_dryrun": "모의 실행",
   "s_au_dryrun_desc": "아무것도 적용하지 않고, 무엇이 업데이트될지 알림만 보냅니다. 실제 업데이트를 켜기 전에 먼저 이 옵션으로 계획을 확인하세요.",
   "s_au_unit_hours": "시간",
-  "s_au_unit_days": "일"
+  "s_au_unit_days": "일",
+  "s_au_containers": "컨테이너",
+  "s_au_containers_desc": "자동 업데이트가 업데이트할 수 있는 컨테이너를 선택합니다. 컨테이너의 체크를 해제하면 제외됩니다. ShipLog가 스스로 업데이트하는 일이 절대 없으므로 직접 업데이트해야 합니다. 수동 업데이트, 변경 로그, 위험 배지에는 영향이 없습니다. 저장하려면 적용을 누르세요.",
+  "s_au_ct_caption": "컨테이너의 체크를 해제하면 자동 업데이트에서 제외됩니다.",
+  "s_au_ct_off": "자동 업데이트가 꺼져 있습니다 — 위에서 켜면 컨테이너를 선택할 수 있습니다.",
+  "s_au_ct_loading": "컨테이너 불러오는 중…",
+  "s_au_ct_none": "아직 컨테이너를 찾지 못했습니다 — 첫 검사가 아직 진행 중일 수 있습니다.",
+  "s_au_ct_gone": "찾을 수 없음",
+  "d_autoLabel": "이 컨테이너 자동 업데이트",
+  "d_autoHintOn": "ShipLog의 예약된 자동 업데이트에 포함됩니다.",
+  "d_autoHintOff": "제외됨 — ShipLog가 스스로 업데이트하지 않습니다. 수동 업데이트는 그대로 작동합니다.",
+  "d_autoHintDisabled": "예약된 자동 업데이트가 ShipLog 설정에서 꺼져 있습니다.",
+  "d_autoSaving": "저장 중 — ShipLog 다시 시작 중…",
+  "d_autoFailed": "저장하지 못했습니다. 페이지를 새로 고친 뒤 다시 시도하세요.",
+  "d_autoOffBadge": "자동 업데이트 꺼짐",
+  "d_autoOffBadgeHint": "ShipLog의 예약된 자동 업데이트에서 제외됨 — 클릭하여 변경"
 }

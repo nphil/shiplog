@@ -105,5 +105,20 @@
   "s_au_dryrun": "Simulação",
   "s_au_dryrun_desc": "Não aplica nada, apenas envia uma notificação do que SERIA atualizado. Use isto primeiro para ver o plano antes de ativar atualizações reais.",
   "s_au_unit_hours": "horas",
-  "s_au_unit_days": "dias"
+  "s_au_unit_days": "dias",
+  "s_au_containers": "Contentores",
+  "s_au_containers_desc": "Escolha que contentores a atualização automática pode atualizar. Desmarque um contentor para o excluir: o ShipLog nunca o atualiza por si só, por isso é você que o atualiza manualmente. As atualizações manuais, os changelogs e os selos de risco não são afetados. Clique em Aplicar para guardar.",
+  "s_au_ct_caption": "Desmarque um contentor para o excluir da atualização automática.",
+  "s_au_ct_off": "A atualização automática está desativada — ative-a acima para escolher contentores.",
+  "s_au_ct_loading": "A carregar contentores…",
+  "s_au_ct_none": "Ainda não foram encontrados contentores — a primeira verificação pode ainda estar a decorrer.",
+  "s_au_ct_gone": "não encontrado",
+  "d_autoLabel": "Atualizar este contentor automaticamente",
+  "d_autoHintOn": "Incluído na atualização automática agendada do ShipLog.",
+  "d_autoHintOff": "Excluído — o ShipLog nunca o atualiza por si só. As atualizações manuais continuam a funcionar.",
+  "d_autoHintDisabled": "A atualização automática agendada está desativada nas definições do ShipLog.",
+  "d_autoSaving": "A guardar — a reiniciar o ShipLog…",
+  "d_autoFailed": "Não foi possível guardar. Recarregue a página e tente novamente.",
+  "d_autoOffBadge": "Atualização automática desativada",
+  "d_autoOffBadgeHint": "Excluído da atualização automática agendada do ShipLog — clique para alterar"
 }

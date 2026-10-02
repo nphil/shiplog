@@ -58,3 +58,37 @@ func TestRenderSummary_Blocked(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderSummary_Skipped(t *testing.T) {
+	res := Result{Outcomes: []Outcome{
+		{Name: "plex", From: "1.2.3", To: "1.2.4", Level: "patch", Updated: true},
+		{Name: "Cody", From: "0.42.1", To: "0.43.0", Level: "minor", Skipped: true},
+	}}
+	text, html := RenderSummary(res)
+	for _, want := range []string{"Auto-updated 1", "plex", "1 skipped (excluded from auto-update)", "Cody 0.42.1→0.43.0 (minor)"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("text missing %q: %s", want, text)
+		}
+	}
+	if !strings.Contains(html, "1 skipped (excluded from auto-update)") || !strings.Contains(html, "Cody") {
+		t.Errorf("html missing the skipped clause: %s", html)
+	}
+	// An exclusion is the admin's own choice: never a failure, never a changelog block.
+	for _, bad := range []string{"failed", "blocked"} {
+		if strings.Contains(text, bad) {
+			t.Errorf("a skipped outcome must not read as %q: %s", bad, text)
+		}
+	}
+
+	// A run whose only outcome is an exclusion is still itemised (for the log) —
+	// and in dry run too, so the exclusion is checkable before it matters.
+	dry, _ := RenderSummary(Result{DryRun: true, Outcomes: []Outcome{{Name: "Cody", Level: "minor", Skipped: true}}})
+	for _, want := range []string{"Auto-update run", "1 skipped (excluded from auto-update)", "Cody ?→? (minor)"} {
+		if !strings.Contains(dry, want) {
+			t.Errorf("skipped-only dry-run text missing %q: %s", want, dry)
+		}
+	}
+	if strings.Contains(dry, "Would auto-update") {
+		t.Errorf("a skipped-only dry run must not claim anything would be updated: %s", dry)
+	}
+}

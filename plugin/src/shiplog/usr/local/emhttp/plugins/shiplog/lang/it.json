@@ -105,5 +105,20 @@
   "s_au_dryrun": "Simulazione",
   "s_au_dryrun_desc": "Non applica nulla, invia solo una notifica di ciò che VERREBBE aggiornato. Usala prima per vedere il piano, poi attivare gli aggiornamenti reali.",
   "s_au_unit_hours": "ore",
-  "s_au_unit_days": "giorni"
+  "s_au_unit_days": "giorni",
+  "s_au_containers": "Container",
+  "s_au_containers_desc": "Scegli quali container l'aggiornamento automatico può aggiornare. Deseleziona un container per escluderlo: ShipLog non lo aggiornerà mai da solo, quindi lo aggiorni tu a mano. Gli aggiornamenti manuali, i changelog e i badge di rischio non sono interessati. Premi Applica per salvare.",
+  "s_au_ct_caption": "Deseleziona un container per escluderlo dall'aggiornamento automatico.",
+  "s_au_ct_off": "L'aggiornamento automatico è disattivato — attivalo sopra per scegliere i container.",
+  "s_au_ct_loading": "Caricamento dei container…",
+  "s_au_ct_none": "Nessun container trovato per ora — la prima scansione potrebbe essere ancora in corso.",
+  "s_au_ct_gone": "non trovato",
+  "d_autoLabel": "Aggiorna automaticamente questo container",
+  "d_autoHintOn": "Incluso nell'aggiornamento automatico pianificato di ShipLog.",
+  "d_autoHintOff": "Escluso — ShipLog non lo aggiorna mai da solo. Gli aggiornamenti manuali funzionano comunque.",
+  "d_autoHintDisabled": "L'aggiornamento automatico pianificato è disattivato nelle impostazioni di ShipLog.",
+  "d_autoSaving": "Salvataggio — riavvio di ShipLog…",
+  "d_autoFailed": "Salvataggio non riuscito. Ricarica la pagina e riprova.",
+  "d_autoOffBadge": "Aggiornamento automatico disattivato",
+  "d_autoOffBadgeHint": "Escluso dall'aggiornamento automatico pianificato di ShipLog — clicca per cambiare"
 }

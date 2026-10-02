@@ -105,5 +105,20 @@
   "s_au_dryrun": "Uruchomienie próbne",
   "s_au_dryrun_desc": "Nic nie stosuje, tylko wysyła powiadomienie o tym, co ZOSTAŁOBY zaktualizowane. Użyj tego najpierw, aby zobaczyć plan przed włączeniem prawdziwych aktualizacji.",
   "s_au_unit_hours": "godzin",
-  "s_au_unit_days": "dni"
+  "s_au_unit_days": "dni",
+  "s_au_containers": "Kontenery",
+  "s_au_containers_desc": "Wybierz, które kontenery może aktualizować automatyczna aktualizacja. Odznacz kontener, aby go wykluczyć: ShipLog nigdy nie zaktualizuje go sam, więc aktualizujesz go ręcznie. Aktualizacje ręczne, dzienniki zmian i znaczniki ryzyka pozostają bez zmian. Kliknij Zastosuj, aby zapisać.",
+  "s_au_ct_caption": "Odznacz kontener, aby wykluczyć go z automatycznej aktualizacji.",
+  "s_au_ct_off": "Automatyczna aktualizacja jest wyłączona — włącz ją powyżej, aby wybrać kontenery.",
+  "s_au_ct_loading": "Wczytywanie kontenerów…",
+  "s_au_ct_none": "Nie znaleziono jeszcze kontenerów — pierwsze skanowanie może jeszcze trwać.",
+  "s_au_ct_gone": "nie znaleziono",
+  "d_autoLabel": "Aktualizuj ten kontener automatycznie",
+  "d_autoHintOn": "Objęty zaplanowaną automatyczną aktualizacją ShipLog.",
+  "d_autoHintOff": "Wykluczony — ShipLog nigdy nie aktualizuje go sam. Aktualizacje ręczne nadal działają.",
+  "d_autoHintDisabled": "Zaplanowana automatyczna aktualizacja jest wyłączona w ustawieniach ShipLog.",
+  "d_autoSaving": "Zapisywanie — ShipLog się restartuje…",
+  "d_autoFailed": "Nie udało się zapisać. Odśwież stronę i spróbuj ponownie.",
+  "d_autoOffBadge": "Aktualizacja automatyczna wyłączona",
+  "d_autoOffBadgeHint": "Wykluczony z zaplanowanej automatycznej aktualizacji ShipLog — kliknij, aby zmienić"
 }

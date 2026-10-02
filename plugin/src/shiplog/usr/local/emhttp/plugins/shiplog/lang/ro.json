@@ -105,5 +105,20 @@
   "s_au_dryrun": "Simulare",
   "s_au_dryrun_desc": "Nu aplică nimic, doar trimite o notificare despre ce AR FI actualizat. Folosiți mai întâi aceasta pentru a vedea planul înainte de a activa actualizările reale.",
   "s_au_unit_hours": "ore",
-  "s_au_unit_days": "zile"
+  "s_au_unit_days": "zile",
+  "s_au_containers": "Containere",
+  "s_au_containers_desc": "Alege ce containere poate actualiza actualizarea automată. Debifează un container pentru a-l exclude: ShipLog nu îl va actualiza niciodată singur, așa că îl actualizezi manual. Actualizările manuale, jurnalele de modificări și insignele de risc nu sunt afectate. Apasă Aplică pentru a salva.",
+  "s_au_ct_caption": "Debifează un container pentru a-l exclude din actualizarea automată.",
+  "s_au_ct_off": "Actualizarea automată este dezactivată — activeaz-o mai sus pentru a alege containere.",
+  "s_au_ct_loading": "Se încarcă containerele…",
+  "s_au_ct_none": "Încă nu s-au găsit containere — prima scanare poate fi încă în desfășurare.",
+  "s_au_ct_gone": "negăsit",
+  "d_autoLabel": "Actualizează automat acest container",
+  "d_autoHintOn": "Inclus în actualizarea automată programată a ShipLog.",
+  "d_autoHintOff": "Exclus — ShipLog nu îl actualizează niciodată singur. Actualizările manuale funcționează în continuare.",
+  "d_autoHintDisabled": "Actualizarea automată programată este dezactivată în setările ShipLog.",
+  "d_autoSaving": "Se salvează — ShipLog se repornește…",
+  "d_autoFailed": "Salvarea a eșuat. Reîncarcă pagina și încearcă din nou.",
+  "d_autoOffBadge": "Actualizare automată oprită",
+  "d_autoOffBadgeHint": "Exclus din actualizarea automată programată a ShipLog — fă clic pentru a schimba"
 }

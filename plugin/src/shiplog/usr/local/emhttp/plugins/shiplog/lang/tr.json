@@ -105,5 +105,20 @@
   "s_au_dryrun": "Deneme çalıştırması",
   "s_au_dryrun_desc": "Hiçbir şey uygulamaz, yalnızca nelerin güncelleneceğine dair bir bildirim gönderir. Gerçek güncellemeleri devreye almadan önce planı görmek için önce bunu kullan.",
   "s_au_unit_hours": "saat",
-  "s_au_unit_days": "gün"
+  "s_au_unit_days": "gün",
+  "s_au_containers": "Kapsayıcılar",
+  "s_au_containers_desc": "Otomatik güncellemenin hangi kapsayıcıları güncelleyebileceğini seç. Bir kapsayıcıyı hariç tutmak için işaretini kaldır: ShipLog onu asla kendi kendine güncellemez, yani sen elle güncellersin. Elle güncellemeler, değişiklik günlükleri ve risk rozetleri etkilenmez. Kaydetmek için Uygula'ya bas.",
+  "s_au_ct_caption": "Bir kapsayıcıyı otomatik güncellemeden hariç tutmak için işaretini kaldır.",
+  "s_au_ct_off": "Otomatik güncelleme kapalı — kapsayıcıları seçmek için yukarıdan aç.",
+  "s_au_ct_loading": "Kapsayıcılar yükleniyor…",
+  "s_au_ct_none": "Henüz kapsayıcı bulunamadı — ilk tarama hâlâ sürüyor olabilir.",
+  "s_au_ct_gone": "bulunamadı",
+  "d_autoLabel": "Bu kapsayıcıyı otomatik güncelle",
+  "d_autoHintOn": "ShipLog'un zamanlanmış otomatik güncellemesine dahil.",
+  "d_autoHintOff": "Hariç tutuldu — ShipLog onu asla kendi kendine güncellemez. Elle güncellemeler yine çalışır.",
+  "d_autoHintDisabled": "Zamanlanmış otomatik güncelleme ShipLog ayarlarında kapalı.",
+  "d_autoSaving": "Kaydediliyor — ShipLog yeniden başlatılıyor…",
+  "d_autoFailed": "Kaydedilemedi. Sayfayı yeniden yükleyip tekrar dene.",
+  "d_autoOffBadge": "Otomatik güncelleme kapalı",
+  "d_autoOffBadgeHint": "ShipLog'un zamanlanmış otomatik güncellemesinden hariç tutuldu — değiştirmek için tıkla"
 }

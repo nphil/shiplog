@@ -105,5 +105,20 @@
   "s_au_dryrun": "Testkörning",
   "s_au_dryrun_desc": "Tillämpa ingenting, skicka bara en avisering om vad som SKULLE uppdateras. Använd detta först för att se planen innan du aktiverar riktiga uppdateringar.",
   "s_au_unit_hours": "timmar",
-  "s_au_unit_days": "dagar"
+  "s_au_unit_days": "dagar",
+  "s_au_containers": "Containrar",
+  "s_au_containers_desc": "Välj vilka containrar den automatiska uppdateringen får uppdatera. Avmarkera en container för att utesluta den: ShipLog uppdaterar den aldrig själv, så du uppdaterar den manuellt. Manuella uppdateringar, ändringsloggar och riskmärken påverkas inte. Tryck på Verkställ för att spara.",
+  "s_au_ct_caption": "Avmarkera en container för att utesluta den från automatisk uppdatering.",
+  "s_au_ct_off": "Automatisk uppdatering är av — slå på den ovan för att välja containrar.",
+  "s_au_ct_loading": "Läser in containrar…",
+  "s_au_ct_none": "Inga containrar hittades ännu — den första genomsökningen kanske fortfarande pågår.",
+  "s_au_ct_gone": "hittades inte",
+  "d_autoLabel": "Uppdatera den här containern automatiskt",
+  "d_autoHintOn": "Ingår i ShipLogs schemalagda automatiska uppdatering.",
+  "d_autoHintOff": "Utesluten — ShipLog uppdaterar den aldrig själv. Manuella uppdateringar fungerar fortfarande.",
+  "d_autoHintDisabled": "Schemalagd automatisk uppdatering är avstängd i ShipLogs inställningar.",
+  "d_autoSaving": "Sparar — startar om ShipLog…",
+  "d_autoFailed": "Det gick inte att spara. Ladda om sidan och försök igen.",
+  "d_autoOffBadge": "Automatisk uppdatering av",
+  "d_autoOffBadgeHint": "Utesluten från ShipLogs schemalagda automatiska uppdatering — klicka för att ändra"
 }

@@ -38,6 +38,10 @@ type Policy struct {
 	Level        Level    // SemVer threshold
 	Digest       bool     // also auto-apply :latest / digest-only moves (level-less)
 	ExcludeWords []string // block an otherwise-eligible update whose changelog text contains any of these (case-insensitive)
+	// ExcludeContainers lists the containers that are never auto-updated (the
+	// admin updates them by hand). Names match case-insensitively; see
+	// ContainerExcluded.
+	ExcludeContainers []string
 }
 
 // ParseExcludeWords splits the AUTOUPDATE_EXCLUDE_WORDS setting (comma-separated)
@@ -53,6 +57,35 @@ func ParseExcludeWords(s string) []string {
 		}
 	}
 	return words
+}
+
+// ParseExcludeContainers splits the AUTOUPDATE_EXCLUDE_CONTAINERS setting
+// (comma-separated container names) into a clean list: trimmed, empties and
+// repeats dropped (a repeat is the same name ignoring case). Original casing
+// and order are kept so the run log can name the container as the admin typed
+// it. Docker container names never contain a comma or a space, so a plain
+// comma list is unambiguous.
+func ParseExcludeContainers(s string) []string {
+	var names []string
+	for _, n := range strings.Split(s, ",") {
+		n = strings.TrimSpace(n)
+		if n != "" && !ContainerExcluded(n, names) {
+			names = append(names, n)
+		}
+	}
+	return names
+}
+
+// ContainerExcluded reports whether name is on the never-auto-update list,
+// ignoring case. An empty list (the default) excludes nothing, so behaviour is
+// unchanged until the admin opts a container out.
+func ContainerExcluded(name string, excluded []string) bool {
+	for _, e := range excluded {
+		if strings.EqualFold(name, e) {
+			return true
+		}
+	}
+	return false
 }
 
 // MatchedExcludeWord reports the FIRST configured word found in the pending
