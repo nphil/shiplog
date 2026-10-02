@@ -13,19 +13,28 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-// ErrRepoNotFound signals that the image repository no longer exists in the
-// registry (a definitive 404 on the tags list / token realm), i.e. the image
-// was deleted upstream. Callers use errors.Is to distinguish "image gone" from a
-// transient lookup failure and mark the container unmaintained rather than
-// carrying a stale "up to date" verdict forward.
+// ErrRepoNotFound signals that the registry DEFINITIVELY reports the image
+// repository as unknown: the tags list answered 404 carrying the OCI error code
+// NAME_UNKNOWN, i.e. the image was deleted upstream. Callers use errors.Is to
+// distinguish "image gone" from a transient lookup failure and mark the
+// container unmaintained rather than carrying a stale "up to date" verdict
+// forward.
+//
+// It must stay narrow. A private package answers 401/403 (ghcr.io: 401 on the
+// anonymous token request, 403 DENIED on tags/list), and a bare 404 can come
+// from a proxy, CDN, misrouted path or a non-OCI registry dialect — none of
+// those prove the image is gone, so none map to this error. Only NAME_UNKNOWN
+// proves absence; everything else is an ordinary (fail-open) lookup error.
 var ErrRepoNotFound = errors.New("image repository not found in the registry")
 
 // Accept lists the manifest media types we ask for on a HEAD, covering both
@@ -75,6 +84,12 @@ type Resolver struct {
 	// authenticated (higher) rate limit. Never sent to any other registry.
 	dhUser  string
 	dhToken string
+
+	// dockerLogins are the inline registry logins read from Docker's config.json
+	// (the file Unraid's own update check uses), keyed by resolver registry host.
+	// Lowest-precedence credential source; see fetchToken. Written once by
+	// WithDockerConfig before the first Resolve, read-only afterwards.
+	dockerLogins map[string]registryLogin
 
 	// Optional GitHub token. When set it is sent as HTTP Basic auth (any
 	// username, the token as password) on the token request for ghcr.io / lscr.io,
@@ -150,6 +165,41 @@ func (r *Resolver) WithDockerHubAuth(user, token string) *Resolver {
 func (r *Resolver) WithGitHubToken(token string) *Resolver {
 	r.ghToken = token
 	return r
+}
+
+// WithDockerConfig loads the registry logins stored inline in the Docker CLI
+// config.json at path (returns r for chaining). A missing, unreadable or
+// malformed file simply yields no logins: anonymous access is always the
+// fallback. See fetchToken for the strict scoping of these credentials.
+func (r *Resolver) WithDockerConfig(path string) *Resolver {
+	r.dockerLogins = loadDockerConfig(path)
+	return r
+}
+
+// DockerLogins reports how many registry logins WithDockerConfig loaded
+// (a count only, so callers can log it without exposing names or secrets).
+func (r *Resolver) DockerLogins() int {
+	return len(r.dockerLogins)
+}
+
+// loginRealmOK reports whether a docker-config login for registry host may be
+// sent to the token realm: only the registry's own realm (same scheme+host as
+// the registry's base URL) or, for Docker Hub, auth.docker.io. A stored login is
+// a long-lived secret, and a registry's challenge is attacker-influenceable
+// input, so it must never reach a realm on any other host.
+func (r *Resolver) loginRealmOK(host, realm string) bool {
+	ru, err := url.Parse(realm)
+	if err != nil || ru.Host == "" {
+		return false
+	}
+	if host == dockerHubRegistry && ru.Scheme == "https" && strings.EqualFold(ru.Host, "auth.docker.io") {
+		return true
+	}
+	bu, err := url.Parse(r.baseURL(host))
+	if err != nil || bu.Host == "" {
+		return false
+	}
+	return ru.Scheme == bu.Scheme && strings.EqualFold(ru.Host, bu.Host)
 }
 
 // hostGate enforces a minimum gap between requests to the same registry host.
@@ -325,10 +375,11 @@ func (r *Resolver) fetchTags(ctx context.Context, base, host, pathRepo string) (
 		}
 		r.noteHostOutcome(host, resp.StatusCode)
 		if resp.StatusCode != http.StatusOK {
+			// Only a 404 whose body carries the OCI error code NAME_UNKNOWN proves the
+			// repository is gone; read it before closing so it can be checked.
+			unknown := resp.StatusCode == http.StatusNotFound && bodyHasNameUnknown(resp.Body)
 			_ = resp.Body.Close()
-			// A definitive 404 means the repository is gone (deleted upstream) —
-			// signal it distinctly so the engine can mark the container unmaintained.
-			if resp.StatusCode == http.StatusNotFound {
+			if unknown {
 				return nil, ErrRepoNotFound
 			}
 			// A 429 that survives the retries is the registry rate-limiting our
@@ -552,9 +603,12 @@ func clampWait(d time.Duration) time.Duration {
 // the advertised service and an enforced repository:<repo>:pull scope, and
 // returns the token plus its advertised lifetime (0 when the realm sends no
 // expires_in). It attaches HTTP Basic auth so the issued token carries the
-// authenticated (higher) rate limit, host-scoped: Docker Hub credentials only on
-// registry-1.docker.io, and a GitHub token (any user, token as password) only on
-// ghcr.io / lscr.io. Credentials are never sent to any other registry.
+// authenticated (higher) rate limit, in this precedence: explicit Docker Hub
+// credentials (only on registry-1.docker.io), then an explicit GitHub token (any
+// user, token as password; only on ghcr.io / lscr.io), then the Docker-config
+// login for exactly this registry host — and that one only when the realm is
+// the registry's own (see loginRealmOK). Credentials are never sent to any
+// other registry or realm, and never on /v2/ requests.
 func (r *Resolver) fetchToken(ctx context.Context, challenge, pathRepo, host string) (string, time.Duration, error) {
 	params := parseChallenge(challenge)
 	realm := params["realm"]
@@ -570,6 +624,7 @@ func (r *Resolver) fetchToken(ctx context.Context, challenge, pathRepo, host str
 		"&scope=" + queryEscape("repository:"+pathRepo+":pull")
 
 	var extra []header
+	loginUsed := false
 	switch {
 	case host == dockerHubRegistry && r.dhUser != "" && r.dhToken != "":
 		cred := base64.StdEncoding.EncodeToString([]byte(r.dhUser + ":" + r.dhToken))
@@ -578,18 +633,34 @@ func (r *Resolver) fetchToken(ctx context.Context, challenge, pathRepo, host str
 		// ghcr.io accepts the PAT as the password with any username.
 		cred := base64.StdEncoding.EncodeToString([]byte("x:" + r.ghToken))
 		extra = append(extra, header{"Authorization", "Basic " + cred})
+	default:
+		if l, ok := r.dockerLogins[host]; ok && r.loginRealmOK(host, realm) {
+			cred := base64.StdEncoding.EncodeToString([]byte(l.user + ":" + l.secret))
+			extra = append(extra, header{"Authorization", "Basic " + cred})
+			loginUsed = true
+		}
 	}
 
 	resp, err := r.do(ctx, http.MethodGet, url, host, "", extra...)
 	if err != nil {
 		return "", 0, err
 	}
+	if loginUsed && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) {
+		// A stale stored login (expired PAT, rotated password) is rejected by the
+		// token realm — and must not turn a PUBLIC image unreadable, which it
+		// would, because an anonymous request needs no login at all. Retry once
+		// without it: a public image still resolves, a private one keeps failing
+		// with its own (fail-open) error.
+		_ = resp.Body.Close()
+		if resp, err = r.do(ctx, http.MethodGet, url, host, ""); err != nil {
+			return "", 0, err
+		}
+	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		// A 404 from the token realm means the repository doesn't exist (deleted).
-		if resp.StatusCode == http.StatusNotFound {
-			return "", 0, ErrRepoNotFound
-		}
+		// A 404 from the token realm says nothing about the repository (it may be
+		// a misrouted realm or a proxy), so it is an ordinary error, never
+		// ErrRepoNotFound.
 		// A rate-limited TOKEN realm must trip the registry's breaker too:
 		// auth.docker.io/ghcr token throttling is the most common 429 source,
 		// and without this the sweep would keep re-hammering it per container.
@@ -614,6 +685,25 @@ func (r *Resolver) fetchToken(ctx context.Context, challenge, pathRepo, host str
 		return body.AccessToken, ttl, nil
 	}
 	return "", 0, fmt.Errorf("token: empty token from realm %s", realm)
+}
+
+// bodyHasNameUnknown reports whether an OCI error body (size-limited) lists the
+// NAME_UNKNOWN code: {"errors":[{"code":"NAME_UNKNOWN",...}]}.
+func bodyHasNameUnknown(body io.Reader) bool {
+	var e struct {
+		Errors []struct {
+			Code string `json:"code"`
+		} `json:"errors"`
+	}
+	if err := json.NewDecoder(io.LimitReader(body, 4<<10)).Decode(&e); err != nil {
+		return false
+	}
+	for _, x := range e.Errors {
+		if x.Code == "NAME_UNKNOWN" {
+			return true
+		}
+	}
+	return false
 }
 
 // parseChallenge parses the key="value" pairs out of a Bearer challenge value,

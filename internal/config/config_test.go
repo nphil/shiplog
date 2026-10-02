@@ -15,6 +15,18 @@ func TestLoadDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadDockerConfigDir(t *testing.T) {
+	t.Setenv("DOCKER_CONFIG", "/custom/dockercfg")
+	if got := Load().DockerConfigDir; got != "/custom/dockercfg" {
+		t.Fatalf("DOCKER_CONFIG override: got %q", got)
+	}
+	t.Setenv("DOCKER_CONFIG", "")
+	t.Setenv("HOME", "/home/someone")
+	if got := Load().DockerConfigDir; got != "/home/someone/.docker" {
+		t.Fatalf("default with HOME set: got %q, want /home/someone/.docker", got)
+	}
+}
+
 func TestLoadOverrides(t *testing.T) {
 	t.Setenv("PORT", "9000")
 	t.Setenv("POLL_INTERVAL", "90m")

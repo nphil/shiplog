@@ -65,11 +65,15 @@ type (
 	Notifier interface {
 		Notify(ctx context.Context, st model.UpdateStatus) error
 	}
-	// caFeedLookuper is the one method engine actually needs from *cafeed.Feed —
+	// caFeedLookuper is the part of *cafeed.Feed the engine actually needs —
 	// declared narrow so tests can fake a feed without reaching into cafeed's
 	// unexported fields. *cafeed.Feed satisfies this automatically.
 	caFeedLookuper interface {
 		Lookup(name, repo, templateURL string) (cafeed.Result, bool)
+		// CrawlsTemplate reports whether Community Applications crawls the
+		// repository a template URL lives in — the evidence that the app is a
+		// CA app at all, which every CA verdict needs.
+		CrawlsTemplate(templateURL string) bool
 	}
 )
 
@@ -93,20 +97,22 @@ type Engine struct {
 	// (sources precedence: override > curated > project > OCI). Injectable so
 	// tests run without an Unraid flash mount; nil-safe.
 	projectPages func() map[string]string
-	// templateURLs loads container-name → template <TemplateURL> per sweep; a 404
-	// at that URL means the app was pulled from Community Applications. Injectable
+	// templateURLs loads container-name → template <TemplateURL> per sweep. For a
+	// template in a repository Community Applications crawls, a 404 at that URL
+	// (with its repo gone too) means the app was pulled from CA. Injectable
 	// (tests) and nil-safe.
 	templateURLs func() map[string]string
 	// checkURL GETs a URL and returns its HTTP status (0 on a transport error).
-	// Used to probe a template's <TemplateURL> for a 404. Injectable so tests
+	// Used to probe a CA template's <TemplateURL> for a 404. Injectable so tests
 	// avoid the network; nil-safe.
 	checkURL func(ctx context.Context, url string) int
-	// caFeed loads the real Community Applications catalog once per sweep,
-	// corroborating (and going beyond) the raw-URL-reachability proxy above:
-	// it also catches an app editorially demoted (CADeprecated, still updated)
-	// or moderator-blacklisted, not only a genuinely deleted template. nil by
-	// default (tests skip it silently, matching every other collaborator
-	// here); wired to a real cafeed.Fetcher via WithCAFeed.
+	// caFeed loads the real Community Applications catalog once per sweep. It is
+	// both the evidence that an app is a CA app at all (its template lives in a
+	// repository CA crawls — the user's own apps never do) and the source of the
+	// CA verdicts: removed/blacklisted, editorially demoted (CADeprecated, still
+	// updated), absent from two crawls. It also gates the raw-URL-reachability
+	// proxy. nil by default (tests skip it silently, matching every other
+	// collaborator here); wired to a real cafeed.Fetcher via WithCAFeed.
 	caFeed func(ctx context.Context) (caFeedLookuper, error)
 }
 
@@ -220,9 +226,11 @@ func (e *Engine) Sweep(ctx context.Context) error {
 		templateURLs = e.templateURLs()
 	}
 	// The real Community Applications catalog, fetched/cached at most once per
-	// sweep. A fetch failure leaves this nil silently — every container just
-	// skips CA-feed corroboration for this sweep; the raw-URL proxy and
-	// changelog.Deprecated checks below run unaffected either way.
+	// sweep. A fetch failure leaves this nil silently — with nothing to tell a
+	// CA app from the user's own, every container skips ALL Community
+	// Applications verdicts this sweep (the raw-URL proxy included: it too only
+	// applies to a template CA crawls). The archived-repo check below is
+	// independent of the feed and runs either way.
 	var caFeed caFeedLookuper
 	if e.caFeed != nil {
 		caFeed, _ = e.caFeed(ctx)
@@ -510,22 +518,27 @@ func (e *Engine) check(ctx context.Context, c model.Container, resolve resolveFu
 			// OpenHands' own template moved from junkerderprovinz/openhands to
 			// junkerderprovinz/unraid-apps; the feed caught up, the stale local
 			// install's <TemplateURL> didn't).
-			// Both checks below only make sense for apps that CAME from
-			// Community Applications. Two signals mark an app as the user's
-			// own instead: a template with no <TemplateURL> (hand-authored,
-			// or a plain `docker run` with no template at all), and an
-			// explicit changelog-source override for its repo (the user
-			// told us where THEY publish it). Such apps are absent from the
-			// CA feed by nature — and a template URL pointing into the
-			// user's own private repo 404s publicly — so the two-crawl
-			// absence rule and the raw-URL proxy would brand every one of
-			// them "Removed from Community Applications" forever. Leave
-			// their CA state alone entirely; the archived-source-repo
-			// signal above still applies, since it comes from the app's
-			// own repo.
+			//
+			// All of it only makes sense for an app that CAME from Community
+			// Applications, and "not in the feed" is exactly what every other
+			// app looks like: the user's own image with the user's own template
+			// was never in CA, so it cannot have been removed from it. Three
+			// signals mark an app as not a CA app: a template with no
+			// <TemplateURL> (hand-authored, or a plain `docker run` with no
+			// template at all); an explicit changelog-source override for its
+			// repo (the user told us where THEY publish it); and — the one that
+			// needs no per-app setup — a <TemplateURL> inside a repository CA
+			// does not crawl, checked against the feed's own repository list.
+			// That last one covers every app published from the user's own
+			// repo, public or private (a private template URL 404s publicly and
+			// would trip the raw-URL proxy). Such an app has its CA state left
+			// alone entirely; the archived-source-repo signal above still
+			// applies, since it comes from the app's own repo. With no feed at
+			// all there is no evidence either way, so nothing is claimed.
 			_, selfSourced := overrides[c.Repo]
+			caApp := c.Managed && u != "" && !selfSourced && caFeed != nil && caFeed.CrawlsTemplate(u)
 			feedConclusive := false
-			if c.Managed && caFeed != nil && u != "" && !selfSourced {
+			if caApp {
 				if res, ok := caFeed.Lookup(c.Name, c.Repo, u); ok {
 					feedConclusive = true
 					switch {
@@ -538,7 +551,7 @@ func (e *Engine) check(ctx context.Context, c model.Container, resolve resolveFu
 					}
 				}
 			}
-			if !feedConclusive && c.Managed && u != "" && !selfSourced && e.checkURL != nil && e.checkURL(ctx, u) == http.StatusNotFound && e.repoGone(ctx, u) {
+			if caApp && !feedConclusive && e.checkURL != nil && e.checkURL(ctx, u) == http.StatusNotFound && e.repoGone(ctx, u) {
 				st.Unmaintained, st.UnmaintainedReason = true, "Removed from Community Applications"
 			}
 		}

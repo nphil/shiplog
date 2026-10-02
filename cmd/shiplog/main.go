@@ -43,11 +43,22 @@ func main() {
 	// then always-succeeds with the fallback. One read-only Docker client serves
 	// both the engine's sweep and the auto-update executor's before/after checks.
 	docker := dockercli.New(cfg.DockerSocket)
+
+	// Registry logins: reuse the inline logins in Docker's config.json — the same
+	// file Unraid's own update check reads — so private images resolve like they
+	// do for Unraid instead of failing anonymously. Anonymous stays the fallback.
+	dockerCfgPath := filepath.Join(cfg.DockerConfigDir, "config.json")
+	reg := resolver.New().
+		WithDockerHubAuth(cfg.DockerHubUser, cfg.DockerHubToken).
+		WithGitHubToken(cfg.GithubToken).
+		WithDockerConfig(dockerCfgPath)
+	if _, statErr := os.Stat(dockerCfgPath); statErr == nil || reg.DockerLogins() > 0 {
+		log.Printf("shiplog: registry logins: %d from %s (same login Unraid's own update check uses)", reg.DockerLogins(), dockerCfgPath)
+	}
+
 	eng := engine.New(
 		docker,
-		resolver.New().
-			WithDockerHubAuth(cfg.DockerHubUser, cfg.DockerHubToken).
-			WithGitHubToken(cfg.GithubToken),
+		reg,
 		changelog.Chain{changelog.New(cfg.GithubToken), changelog.Fallback{}},
 		db,
 		cfg.PollInterval,

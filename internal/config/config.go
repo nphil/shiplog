@@ -3,6 +3,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,11 @@ type Config struct {
 	DataDir      string        // DATA_DIR (SQLite + curated-mapping override)
 	PollInterval time.Duration // POLL_INTERVAL
 	GithubToken  string        // GITHUB_TOKEN (optional; raises GitHub API limit for changelogs)
+
+	// DockerConfigDir is the directory holding Docker's config.json, whose inline
+	// registry logins the resolver reuses (the same file Unraid's own update check
+	// reads). DOCKER_CONFIG, default $HOME/.docker (/root/.docker when HOME is unset).
+	DockerConfigDir string
 
 	// IgnoreUnmanaged skips containers WITHOUT Unraid's net.unraid.docker.managed
 	// label — third-party containers (Docker Compose / Dockhand / plain
@@ -76,6 +82,7 @@ type AutoUpdateConfig struct {
 func Load() Config {
 	return Config{
 		DockerSocket:     env("DOCKER_SOCKET", "/var/run/docker.sock"),
+		DockerConfigDir:  dockerConfigDir(),
 		Port:             env("PORT", "8484"),
 		DataDir:          env("DATA_DIR", "/config"),
 		PollInterval:     dur("POLL_INTERVAL", 6*time.Hour),
@@ -140,6 +147,19 @@ func env(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// dockerConfigDir resolves the Docker CLI config directory the way the Docker CLI
+// does: DOCKER_CONFIG, else $HOME/.docker. The daemon runs as root, so an unset
+// HOME falls back to /root/.docker.
+func dockerConfigDir() string {
+	if d := os.Getenv("DOCKER_CONFIG"); d != "" {
+		return d
+	}
+	if home := os.Getenv("HOME"); home != "" {
+		return filepath.Join(home, ".docker")
+	}
+	return "/root/.docker"
 }
 
 // dur parses a Go duration (e.g. "6h", "90m"); falls back to def on empty/invalid.

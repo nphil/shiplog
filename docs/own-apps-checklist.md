@@ -1,0 +1,24 @@
+# Your own apps: a setup checklist for Unraid + ShipLog
+
+Two things read your container setup and can disagree with reality if a field is off:
+
+- **Unraid's update column** (green *up-to-date* / orange *update ready* / orange *not available*). It asks the registry for the digest behind your image tag, using the logins in `/root/.docker/config.json`. No digest → *not available*.
+- **ShipLog's badges** (changelog chip, red **Discontinued**, amber **Deprecated**). They are recomputed from evidence on every sweep; fix the cause and the badge clears on the next one.
+
+Follow these seven points when you add any app you build or publish yourself, and both stay right.
+
+1. **Choose public or private for the image on purpose.** A *public* package (GHCR: *Package settings → visibility*; Gitea/Docker Hub: public repo) is readable anonymously, so Unraid and ShipLog need nothing else. A *private* one needs the login in point 2. Anonymously, a private GHCR package answers 401/403; Unraid then shows *not available*, and ShipLog treats it as "cannot see", never as "removed".
+2. **For a private image or private registry, log Unraid in — exactly and persistently.** As root: `printf '%s' "$TOKEN" | docker login <registry-host> -u <user> --password-stdin` (for GHCR a *classic* PAT with `read:packages`). The `auths` key must be exactly the host in the template's `<Repository>` (`ghcr.io`, `registry.example.org`), and the entry must be stored inline — no `credsStore` / `credHelpers`; both Unraid and ShipLog read inline `auths` only. Unraid's `/` is RAM: copy the file to `/boot/config/ghcr/config.json` and restore it from `/boot/config/go`, or the login vanishes at reboot. ShipLog reuses that same file automatically (`DOCKER_CONFIG`, default `/root/.docker`), so there is no second credential to keep in sync. An expiring PAT silently turns the column back to *not available* — note its expiry.
+3. **`<Repository>` is the full, pullable reference, and you really publish that tag.** Example: `ghcr.io/<you>/<app>:latest`. Push the tag to the registry; an image that exists only on the server is "built locally" and is not checked. Do not delete or rename a package while a container still runs from it — when the registry answers *repository unknown* ShipLog correctly reports **Image no longer in the registry**.
+4. **`<TemplateURL>`: leave it empty unless you publish the template yourself, and never borrow a Community Applications path.** Empty means there is nothing to check and nothing to break. If you do publish one, use the raw file in *your* repo (`https://raw.githubusercontent.com/<you>/<repo>/<branch>/<path>.xml`, not a github.com `blob` page) and keep the path stable. ShipLog gives Community Applications verdicts only to templates that live in a repository CA crawls (checked against the feed's own repository list), so a template in your own repo — public or private — can never be "Removed from Community Applications", because it was never in it. Submit to CA only if you want to be listed; then it is a CA app like any other.
+5. **Set the OCI labels in the image; let Unraid add its own.** `org.opencontainers.image.source=https://github.com/<you>/<repo>` (ShipLog reads the changelog there and GHCR links the package to the repo — if that repo is *archived*, ShipLog shows **Discontinued** by design, so point it at the live repo) and `org.opencontainers.image.version` (a rolling `:latest` shows its version immediately). `net.unraid.docker.managed=dockerman` is added by Unraid when it creates the container from a template — create apps from a template, not `docker run` or compose, if you want them inside ShipLog's "ignore third-party containers" scope; never hand-add that label.
+6. **Never silence a badge with a per-app workaround.** No changelog-source overrides, database edits or emptied templates to dodge a flag: read the reason on the badge and fix its cause. *Removed from Community Applications* = CA blacklisted the app or dropped it from a repository it crawls; *Image no longer in the registry* = the registry said "repository unknown"; *Source repository archived* = the repo in the image's source label is archived.
+7. **Verify once after setup.** Replace the placeholders:
+   ```sh
+   # Public or private? 200 = anonymous token issued = public; 401/403 = private or missing
+   curl -s -o /dev/null -w '%{http_code}\n' "https://ghcr.io/token?service=ghcr.io&scope=repository:<you>/<app>:pull"
+   # Unraid's own view (status true/false and a non-null remote = the login works)
+   jq '."ghcr.io/<you>/<app>:latest"' /var/lib/docker/unraid-update-status.json
+   # ShipLog's view: no "unmaintained" fields, an up-to-date or update kind
+   curl -s http://<server>:8484/api/containers | jq '.[] | select(.container.name=="<App>") | {kind, unmaintained, unmaintained_reason}'
+   ```

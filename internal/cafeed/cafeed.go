@@ -18,6 +18,12 @@
 // template-URL proxy (see engine.repoGone). Any fetch failure falls back to
 // whatever is cached; with nothing cached at all, every lookup is
 // inconclusive rather than guessed — fail open, never fail closed.
+//
+// Absence from the feed only means "removed" for an app CA once carried. An
+// app that never was in CA — the user's own image with the user's own
+// template — is absent by nature, so the engine asks CrawlsTemplate first and
+// leaves every CA verdict alone for a template whose repository CA does not
+// crawl.
 package cafeed
 
 import (
@@ -28,6 +34,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -51,9 +58,13 @@ type Entry struct {
 // rawFeed mirrors only the top-level fields ShipLog reads out of the ~24MB
 // feed; encoding/json silently ignores every field it doesn't know about.
 type rawFeed struct {
-	AppList              []Entry           `json:"applist"`
-	Blacklisted          map[string]string `json:"blacklisted"`
-	LastUpdatedTimestamp int64             `json:"last_updated_timestamp"`
+	AppList     []Entry           `json:"applist"`
+	Blacklisted map[string]string `json:"blacklisted"`
+	// Repositories is CA's list of template repositories it crawls (name →
+	// {url, …}). Kept raw and decoded leniently: a shape change there must
+	// cost us this one signal, never the whole feed.
+	Repositories         json.RawMessage `json:"repositories"`
+	LastUpdatedTimestamp int64           `json:"last_updated_timestamp"`
 }
 
 type rawLastUpdated struct {
@@ -65,8 +76,12 @@ type Feed struct {
 	byName        map[string][]Entry
 	byRepo        map[string][]Entry // normalized "owner/repo" -> entries sharing that repo (more than one CA template can wrap the same image)
 	byTemplateURL map[string]Entry   // exact <TemplateURL> -> entry; CA's own canonical identity for a template
-	blacklisted   map[string]string  // normalized "owner/repo" -> reason
-	previous      *Feed              // the crawl before this one, if one was cached; nil otherwise
+	// templateRepos is every template repository CA crawls, as the key
+	// templateRepoKey derives ("github.com/owner/repo"): the feed's own
+	// repositories list plus the repository behind every listed TemplateURL.
+	templateRepos map[string]struct{}
+	blacklisted   map[string]string // normalized "owner/repo" -> reason
+	previous      *Feed             // the crawl before this one, if one was cached; nil otherwise
 }
 
 // Result is what the feed says about one container, after cross-crawl
@@ -200,7 +215,11 @@ func parseOne(b []byte) *Feed {
 	for repo, reason := range raw.Blacklisted {
 		blacklisted[normalizeRepo(repo)] = reason
 	}
-	return &Feed{byName: byName, byRepo: byRepo, byTemplateURL: byTemplateURL, blacklisted: blacklisted}
+	return &Feed{
+		byName: byName, byRepo: byRepo, byTemplateURL: byTemplateURL,
+		templateRepos: indexTemplateRepos(raw.AppList, raw.Repositories),
+		blacklisted:   blacklisted,
+	}
 }
 
 // indexEntries builds the three lookup indexes Feed matches against: by
@@ -225,11 +244,99 @@ func indexEntries(entries []Entry) (byName, byRepo map[string][]Entry, byTemplat
 	return byName, byRepo, byTemplateURL
 }
 
+// indexTemplateRepos collects every template repository the feed shows CA
+// crawling: the explicit repositories list (name → {url}) AND the repository
+// behind each listed TemplateURL, so a repo is recognised even if one of the
+// two sources is missing or reshaped. Best-effort: anything it can't read just
+// contributes nothing (which only makes the engine MORE conservative).
+func indexTemplateRepos(entries []Entry, repositories json.RawMessage) map[string]struct{} {
+	repos := make(map[string]struct{}, 2048)
+	for _, e := range entries {
+		if k, ok := templateRepoKey(e.TemplateURL); ok {
+			repos[k] = struct{}{}
+		}
+	}
+	var listed map[string]struct {
+		URL string `json:"url"`
+	}
+	if json.Unmarshal(repositories, &listed) == nil {
+		for _, r := range listed {
+			if k, ok := templateRepoKey(r.URL); ok {
+				repos[k] = struct{}{}
+			}
+		}
+	}
+	return repos
+}
+
+// templateRepoKey reduces a template (or repository) URL to the lower-cased
+// "host/owner/repo" of the repository it lives in, for the two hosts
+// Community Applications crawls: GitHub (raw.githubusercontent.com, github.com
+// blob/raw/tree URLs) and GitLab (".../owner/repo/-/raw/..."; the project path
+// is everything before the "/-/" marker, so nested groups work). Branch, file
+// path, ".git" suffix, query and case are all ignored. ok=false for any other
+// host or a URL that names no repository — such a template is not one CA can
+// have crawled.
+func templateRepoKey(raw string) (string, bool) {
+	s := strings.TrimSpace(raw)
+	switch {
+	case strings.HasPrefix(s, "https://"):
+		s = s[len("https://"):]
+	case strings.HasPrefix(s, "http://"):
+		s = s[len("http://"):]
+	default:
+		return "", false
+	}
+	if i := strings.IndexAny(s, "?#"); i >= 0 {
+		s = s[:i]
+	}
+	host, path, _ := strings.Cut(s, "/")
+	host = strings.TrimPrefix(strings.ToLower(host), "www.")
+	segs := strings.FieldsFunc(strings.ToLower(path), func(r rune) bool { return r == '/' })
+	switch host {
+	case "raw.githubusercontent.com", "github.com":
+		host = "github.com"
+		segs = segs[:min(len(segs), 2)]
+	case "gitlab.com":
+		if i := slices.Index(segs, "-"); i >= 0 {
+			segs = segs[:i]
+		} else {
+			segs = segs[:min(len(segs), 2)] // older raw URLs: .../owner/repo/raw/branch/file
+		}
+	default:
+		return "", false
+	}
+	if len(segs) < 2 {
+		return "", false
+	}
+	segs[len(segs)-1] = strings.TrimSuffix(segs[len(segs)-1], ".git")
+	return host + "/" + strings.Join(segs, "/"), true
+}
+
+// CrawlsTemplate reports whether Community Applications crawls the repository
+// templateURL lives in — the precondition for ANY CA verdict about an
+// installed app. An app absent from the feed was "removed from CA" only if CA
+// once carried it; a template from a repository CA has never crawled (the
+// user's own image with the user's own template, a private template repo, a
+// copy pasted from a forum) is absent by nature, and CA has nothing to say
+// about it. Judged on the CURRENT feed alone, so the answer cannot flap
+// between crawls. false (also for a URL we cannot place on a known host)
+// means "leave this app's CA state alone".
+func (f *Feed) CrawlsTemplate(templateURL string) bool {
+	key, ok := templateRepoKey(templateURL)
+	if !ok {
+		return false
+	}
+	_, crawled := f.templateRepos[key]
+	return crawled
+}
+
 // Lookup reports what the feed says about a container. ok=false means
 // inconclusive (an ambiguous name match with no repo/templateURL able to
-// narrow it, or an apparent absence with no previous crawl yet to confirm it
-// against) — callers must leave the container's CA state alone, never treat
-// ok=false as any kind of verdict.
+// narrow it, an apparent absence with no previous crawl yet to confirm it
+// against, or an absence for a template whose repository CA does not crawl —
+// see CrawlsTemplate) — callers must leave the container's CA state alone,
+// never treat ok=false as any kind of verdict.
 func (f *Feed) Lookup(name, repo, templateURL string) (Result, bool) {
 	n := normalizeName(name)
 	matches := f.byName[n]
@@ -254,6 +361,11 @@ func (f *Feed) Lookup(name, repo, templateURL string) (Result, bool) {
 			}
 			if _, prevFound := f.previous.matchByIdentity(repo, templateURL); prevFound {
 				return Result{}, false // present last crawl by repo/URL; today's gap unconfirmed
+			}
+			if !f.CrawlsTemplate(templateURL) {
+				// Absent from every crawl, but also from a repository CA never
+				// crawled: the app was never here to be removed.
+				return Result{}, false
 			}
 			return Result{Listed: false}, true // absent from two consecutive crawls, by every identity
 		}
