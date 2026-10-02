@@ -33,6 +33,15 @@ Shows the changelog of your installed Docker containers, right in the Docker tab
 what changed from your running image to the newest, with a risk badge. Read-only,
 optional AI summaries (Ollama or llama-swap) and Matrix alerts.
 
+### 3.5.0
+✨ **Feature** (nphil fork)
+- Choose which containers auto-update may touch. Settings → Updates now lists your containers with a checkbox each: untick one and ShipLog will never auto-update it, so you can keep updating it by hand. Every other container auto-updates exactly as before, and manual updates, changelogs and risk badges are not affected. Nothing is excluded until you untick something. The list greys out, with a hint, while auto-update itself is off.
+- The Docker tab shows it where you look: an excluded container gets a small "Auto-update off" tag next to its Changelog button, and its changelog window has a switch to turn auto-update on or off for just that container in one click.
+- In the ShipLog log an excluded container shows up as "skipped (excluded from auto-update)", clearly apart from updates blocked by the changelog words. A run whose only result is skipping excluded containers is logged but does not send a notification.
+
+🌐 **Translations**
+- The new texts are translated into all 26 supported languages.
+
 ### 3.4.0
 ✨ **Feature** (nphil fork)
 - AI summaries can now come from llama-swap — or any OpenAI-compatible server (LM Studio, vLLM) — alongside Ollama: new llama-swap URL + model fields with a live Check button in Settings → AI summaries. When both are configured, llama-swap takes priority.
