@@ -1,6 +1,8 @@
 package store
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"testing"
 	"time"
@@ -334,5 +336,43 @@ func TestSourceOverridesRoundTrip(t *testing.T) {
 	m, _ = s.SourceOverrides()
 	if len(m) != 1 || m["ghcr.io/x/media-preview-generator"] == "" {
 		t.Fatalf("after delete = %v", m)
+	}
+}
+
+// A daemon restart opens the store while the previous process may still be
+// closing it. Open must wait out such a brief lock instead of failing with
+// SQLITE_BUSY — which kills the new daemon at startup and leaves ShipLog down
+// until someone starts it by hand.
+func TestOpenWaitsOutABriefLock(t *testing.T) {
+	path := t.TempDir() + "/shiplog.db"
+	ctx := context.Background()
+
+	holder, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = holder.Close() })
+	conn, err := holder.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	for _, q := range []string{`CREATE TABLE lock_probe (x INTEGER)`, `BEGIN EXCLUSIVE`} {
+		if _, err := conn.ExecContext(ctx, q); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+	const hold = 300 * time.Millisecond
+	release := time.AfterFunc(hold, func() { _, _ = conn.ExecContext(ctx, `COMMIT`) })
+	defer release.Stop()
+
+	start := time.Now()
+	s, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open failed while the database was briefly locked: %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	if waited := time.Since(start); waited < hold/2 {
+		t.Fatalf("Open returned after %v, before the lock (held %v) was released — the lock was not exercised", waited, hold)
 	}
 }

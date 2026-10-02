@@ -102,13 +102,17 @@ func Open(path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := db.Exec(`PRAGMA journal_mode=WAL;`); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("store: set WAL: %w", err)
-	}
+	// busy_timeout FIRST: the WAL pragma is already the first statement to touch
+	// the file, and a restart opens the store while the previous process may still
+	// be closing it. Without a busy handler that instant lock fails Open with
+	// SQLITE_BUSY, the new daemon exits, and ShipLog stays down.
 	if _, err := db.Exec(`PRAGMA busy_timeout=5000;`); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("store: set busy_timeout: %w", err)
+	}
+	if _, err := db.Exec(`PRAGMA journal_mode=WAL;`); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("store: set WAL: %w", err)
 	}
 	if _, err := db.Exec(schema); err != nil {
 		_ = db.Close()
