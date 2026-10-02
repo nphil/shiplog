@@ -33,6 +33,16 @@ Shows the changelog of your installed Docker containers, right in the Docker tab
 what changed from your running image to the newest, with a risk badge. Read-only,
 optional AI summaries (Ollama or llama-swap) and Matrix alerts.
 
+### 3.6.0
+🔧 **Fix** (nphil fork)
+- Containers are no longer restarted every morning for updates that do not exist. ShipLog now decides "up to date" by the image behind a container's own tag: if the registry serves the image the container already runs, there is nothing to update, whatever other version tags the registry also holds. Before, a container on a rolling tag such as latest could be flagged as a "major" update because the registry also lists some unrelated tag that sorts higher (an old date tag, or another release channel), and auto-update then pulled, restarted and logged it as updated every day. Sonarr, Tautulli and NZBGet were hit this way.
+- A rolling tag is only labelled patch, minor or major when the newest version tag is the very image the tag now serves; otherwise a real image change is shown as a plain "digest" update. Real updates (latest, nightly and similar tags that really got a new image) are applied exactly as before.
+- A container pinned to a specific version (for example 0.6.1) is no longer shown as an update, or restarted by auto-update, just because a newer version (0.7.0) exists: pulling a pinned tag again can never bring it. ShipLog now shows a quiet hint instead — "Newer version 0.7.0 available — change the tag to update" — in the Docker tab and in Settings → Updates. It is not counted as an update, and auto-update never touches it.
+- Auto-update now checks its own work. Right before updating it looks at what the container really runs: one that already runs the newest image is skipped and logged as "nothing to do". Right after, it looks again and only counts the update as done when the container now runs a different image, the expected one. An update that left the image unchanged is logged as a failure ("update did not change the image"), not as a success.
+
+🌐 **Translations**
+- The new texts are translated into all 26 supported languages.
+
 ### 3.5.1
 🔧 **Fix** (nphil fork)
 - ShipLog could occasionally fail to come back after a restart (pressing Apply in the settings, or flipping the new per-container auto-update switch) and then stay stopped: the new process hit a briefly locked database and gave up at start-up. It now waits a few seconds for the lock instead.
