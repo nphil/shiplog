@@ -606,12 +606,15 @@
   //     its overlay" bug where hiding was armed before the confirm even existed).
   //   • While the log is up it hides it + the overlay (body.sl-hide-nchan CSS) and clears
   //     `stop-scrolling`, so the page stays usable — no dark, click-eating, scroll-locked backdrop.
-  //   • openDocker DISABLES the log's confirm button during the run; openDone RE-ENABLES it ONLY
-  //     on completion (_DONE_ — HeadInlineJS.php:324-338). We latch on that disabled->enabled
-  //     transition and click the now-"Done" button, which runs Unraid's OWN teardown (removes the
-  //     overlay, clears the scroll-lock, stops nchan, runs loadlist). Locale-proof (no text match)
-  //     and safe: only ever the finished `.nchan` log's Done button — never a confirm-to-proceed
-  //     or a delete/remove dialog.
+  //   • The run is finished when Unraid says so: 7.3 re-enables the log's confirm button (it was
+  //     disabled for the run); 7.4 flips `#pluginProgressTitle` to `nchan-done` (see logState).
+  //     We then click the now-"Done"/"Dismiss" button, which runs Unraid's OWN teardown (removes
+  //     the overlay, clears the scroll-lock, runs loadlist, clears the 7.4 tray tile). Locale-proof
+  //     (state classes / disabled attribute, no text match) and safe: only ever the finished
+  //     `.nchan` log's own button — never a confirm-to-proceed or a delete/remove dialog. An
+  //     ERROR run is never dismissed: the log is revealed so the user can read what failed.
+  //   • If the user minimizes the 7.4 log to the tray, we give the page back, keep the row
+  //     spinner until the Docker task ends (page global `taskList`), and leave the tray tile alone.
   //   • Writes NO inline style/dataset onto the shared swal node (only a body class it removes on
   //     stop), so the 2nd/3rd update inherits a clean node. A safety cap reveals the log if the
   //     job never reports done, so the user is never left staring at a hidden, stuck modal.
@@ -678,11 +681,50 @@
     } catch (e) { return []; }
   }
 
+  // Completion of the hidden log, across Unraid versions (the log is `.sweet-alert.nchan` +
+  // `#swaltext` in both):
+  //   • 7.3.x — openDocker() DISABLES `button.confirm` for the run; openDone() re-enables it
+  //     (labelled "Done"), openError() re-enables it too but labels BOTH the button and the
+  //     `#pluginProgressTitle` span "Error" (same text; a finished run says "Done"/"Finished").
+  //   • 7.4.x — the run is a tray task (createTask/foregroundTask). While it runs the confirm
+  //     button is HIDDEN, not disabled; on finish `#pluginProgressTitle` (a div) gets the class
+  //     `nchan-done` / `nchan-error` and the button is shown as "Dismiss". Clicking it runs the
+  //     task callback (loadlist) and removes the task from the tray. The sheet can also be
+  //     minimized to the tray (the `.sweet-alert.nchan` node goes away while the task runs on).
+  // Returns "running" | "done" | "error" for the log; never decides from button text except the
+  // 7.3 error heuristic above (button text === title text), whose failure mode is "reveal the
+  // log", never "click something unwanted".
+  const isShown = (b) => b.style.display !== "none" && !b.hidden;
+  function logState(log, btn, st) {
+    const title = log.querySelector("#pluginProgressTitle");
+    const cl = title && title.classList;
+    if (cl && cl.contains("nchan-error")) return "error";
+    if (cl && cl.contains("nchan-done")) return btn ? "done" : "running";
+    if (!btn) return "running";
+    if (btn.disabled || !isShown(btn)) { st.sawBusy = true; return "running"; } // 7.3 disabled / 7.4 hidden
+    if (cl && cl.contains("nchan-running")) return "running"; // 7.4: title still says running
+    if (!st.sawBusy) return "running"; // never saw it busy → not a completion we can vouch for
+    // 7.3 (no state classes): enabled again after being disabled = finished. Error labels the
+    // button with the same text as the title span.
+    const bt = (btn.textContent || "").trim(), tt = title ? (title.textContent || "").trim() : "";
+    return bt && bt === tt ? "error" : "done";
+  }
+  // Is a Docker task still active in Unraid 7.4's task list (`taskList`, a page global)? null
+  // when the list is unavailable (7.3).
+  function dockerTaskActive() {
+    try {
+      const tl = window.taskList;
+      if (!Array.isArray(tl)) return null;
+      return tl.some((t) => t && t.type === "docker" && /^(running|queued|aborting)$/.test(t.status));
+    } catch (e) { return null; }
+  }
+
   let silentArm = null;
   function armSilentLogHide(names) {
     armSpin(names);        // queue the updating row(s); the spinner paints when the log appears
     if (silentArm) return; // already watching this flow
-    let obs = null, poll = 0, cap = 0, armedBody = false, sawDisabled = false;
+    let obs = null, poll = 0, cap = 0, armedBody = false, released = false;
+    const st = { sawBusy: false };
     const stop = () => {
       try { obs && obs.disconnect(); } catch (e) {}
       clearInterval(poll); clearTimeout(cap);
@@ -696,22 +738,37 @@
       // could momentarily reuse the same node — so we NEVER hide or auto-dismiss a confirm
       // (this closes the only path that could resurrect an unwanted auto-confirm).
       const log = document.querySelector(".sweet-alert.nchan");
-      if (!log || !log.querySelector("#swaltext")) return; // confirm phase / nothing yet → touch nothing
+      const hasLog = !!log && !!log.querySelector("#swaltext");
+      if (released) { // the user left the log (7.4 minimize): watch the task list, never re-hide
+        const act = dockerTaskActive();
+        if (act === false) stop(); // the task ended while minimized — leave its tray tile alone
+        return;
+      }
+      if (!hasLog) {
+        if (!armedBody) return; // confirm phase / nothing yet → touch nothing
+        // The hidden log is gone without us dismissing it: minimized to the 7.4 tray (task keeps
+        // running) or closed. Give the page back and, if tasks can be tracked, keep the row
+        // spinners until the task ends; otherwise (7.3) there is nothing left to wait for.
+        document.body.classList.remove("sl-hide-nchan");
+        released = true;
+        if (dockerTaskActive() === null) stop();
+        return;
+      }
       if (!armedBody) { document.body.classList.add("sl-hide-nchan"); armedBody = true; }
       spinLogAppeared(); // the hidden log now exists → start painting the row spinner(s)
       // idempotent: only touch the class when present, so this write can't re-feed an observer
       if (document.body.classList.contains("stop-scrolling")) document.body.classList.remove("stop-scrolling");
       const done = log.querySelector("button.confirm");
-      if (!done) return;
-      if (done.disabled) { sawDisabled = true; return; }  // running
-      if (sawDisabled) { done.click(); stop(); }          // finished → Unraid's own teardown + loadlist
+      const state = logState(log, done, st);
+      if (state === "error") { stop(); return; } // reveal the log: the user must see what failed
+      if (state === "done") { done.click(); stop(); } // Unraid's own teardown (+ loadlist, + 7.4 tray removal)
     };
     silentArm = { stop };
     try {
       obs = new MutationObserver(tick);
       // childList catches the `.nchan` log node appearing; the 400ms poll catches openDone
-      // flipping the Done button's `disabled` attribute. Deliberately NOT watching attributes,
-      // so writing our own body class inside tick() can never re-feed this observer.
+      // flipping the button's `disabled` attribute / the title class. Deliberately NOT watching
+      // attributes, so writing our own body class inside tick() can never re-feed this observer.
       obs.observe(document.body, { childList: true, subtree: true });
     } catch (e) {}
     poll = setInterval(tick, 400);          // robust re-poll: openDone flips attrs, not just class

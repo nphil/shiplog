@@ -33,6 +33,12 @@ Shows the changelog of your installed Docker containers, right in the Docker tab
 what changed from your running image to the newest, with a risk badge. Read-only,
 optional AI summaries (Ollama or llama-swap) and Matrix alerts.
 
+### 3.6.2
+🔧 **Fix** (nphil fork)
+- Silent updates work again on Unraid 7.4. 7.4 runs a container update as a background task with its own progress window, and ShipLog's "silent update" never noticed that task finishing: the progress window stayed hidden and the spinner on the container kept turning for 15 minutes. ShipLog now recognises a finished task on both Unraid 7.3 and 7.4 and dismisses it for you.
+- If an update fails, the progress window is now shown instead of being dismissed, so you can read what went wrong.
+- If you minimize the progress window to the task tray on 7.4, the page is given back to you straight away and the spinner stops when the task ends.
+
 ### 3.6.1
 🔧 **Fix** (nphil fork)
 - Apps you build and publish yourself are no longer branded "Discontinued". An app whose template points into your own GitHub repo (public or private) was never in Community Applications, yet ShipLog read "not in the Community Applications list" as "removed from it". ShipLog now gives a Community Applications verdict only to an app that really came from there, meaning its template lives in a repository Community Applications crawls. Your own apps are left alone, with no per-app workaround needed, and a wrong flag that was already set clears by itself at the next check.
